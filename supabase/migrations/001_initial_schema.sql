@@ -319,14 +319,7 @@ CREATE POLICY "Usuário sai do grupo"
 -- invite_codes
 CREATE POLICY "Membros veem convites do grupo"
   ON invite_codes FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM group_members
-      WHERE group_id = invite_codes.group_id
-        AND user_id = auth.uid()
-        AND status = 'active'
-    )
-  );
+  USING (public.is_group_member(invite_codes.group_id, auth.uid()));
 CREATE POLICY "Organizadores criam convites"
   ON invite_codes FOR INSERT TO authenticated
   WITH CHECK (

@@ -1,14 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Settings, Share2, Star, ChevronRight } from 'lucide-react'
+import { Plus, Settings, Share2, Star, ChevronRight, Copy, Check, Link2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Header } from '@/components/layout/Header'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { BottomSheet } from '@/components/ui/BottomSheet'
+import { createInviteCode } from '@/lib/actions/groups'
 import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, formatCurrency, cn } from '@/lib/utils'
@@ -82,6 +85,7 @@ export default function GroupPageClient({
   ranking,
 }: GroupPageClientProps) {
   const [tab, setTab] = useState<Tab>('events')
+  const [shareOpen, setShareOpen] = useState(false)
 
   const sport = SPORT_MAP[group.sport as SportId]
   const isAdmin = myRole === 'admin'
@@ -102,7 +106,10 @@ export default function GroupPageClient({
         showBack
         rightAction={
           <div className="flex gap-1">
-            <button className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 cursor-pointer">
+            <button
+              onClick={() => setShareOpen(true)}
+              className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 cursor-pointer"
+            >
               <Share2 className="size-4" />
             </button>
             {isAdmin && (
@@ -162,6 +169,8 @@ export default function GroupPageClient({
         </div>
       </div>
 
+      <InviteSheet groupId={groupId} isOpen={shareOpen} onClose={() => setShareOpen(false)} />
+
       {/* Tab content */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -181,7 +190,7 @@ export default function GroupPageClient({
             />
           )}
           {tab === 'members' && (
-            <MembersTab members={members} isOrganizer={isOrganizer} group={group} currentUserId={currentUserId} />
+            <MembersTab members={members} isOrganizer={isOrganizer} group={group} currentUserId={currentUserId} onInvite={() => setShareOpen(true)} />
           )}
           {tab === 'ranking' && (
             <RankingTab ranking={ranking} currentUserId={currentUserId} />
@@ -336,12 +345,13 @@ function EventCard({ event, groupId, index }: { event: EventItem; groupId: strin
 // ─── Members Tab ───────────────────────────────────────────────────────────────
 
 function MembersTab({
-  members, isOrganizer, group, currentUserId,
+  members, isOrganizer, group, currentUserId, onInvite,
 }: {
   members: MemberItem[]
   isOrganizer: boolean
   group: GroupDetail
   currentUserId: string
+  onInvite: () => void
 }) {
   const monthly = members.filter((m) => m.member_type === 'monthly')
   const regular = members.filter((m) => m.member_type === 'regular')
@@ -401,7 +411,7 @@ function MembersTab({
       )}
 
       {isOrganizer && (
-        <Button variant="outline" fullWidth leftIcon={<Plus className="size-4" />}>
+        <Button variant="outline" fullWidth leftIcon={<Plus className="size-4" />} onClick={onInvite}>
           Convidar membro
         </Button>
       )}
@@ -455,6 +465,84 @@ function MemberRow({
         )}
       </div>
     </motion.div>
+  )
+}
+
+// ─── Invite Sheet ──────────────────────────────────────────────────────────────
+
+function InviteSheet({ groupId, isOpen, onClose }: { groupId: string; isOpen: boolean; onClose: () => void }) {
+  const [code, setCode] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!isOpen) { setCode(null); setCopied(false) }
+  }, [isOpen])
+
+  const inviteUrl = code ? `${typeof window !== 'undefined' ? window.location.origin : ''}/join/${code}` : null
+
+  async function handleGenerate() {
+    setLoading(true)
+    const result = await createInviteCode(groupId)
+    setLoading(false)
+    if (result.error) toast.error(result.error)
+    else if (result.code) setCode(result.code)
+  }
+
+  async function handleCopy() {
+    if (!inviteUrl) return
+    await navigator.clipboard.writeText(inviteUrl)
+    setCopied(true)
+    toast.success('Link copiado!')
+    setTimeout(() => setCopied(false), 2500)
+  }
+
+  async function handleShare() {
+    if (!inviteUrl) return
+    if (typeof navigator.share === 'function') {
+      await navigator.share({ title: 'Entrar no grupo', url: inviteUrl }).catch(() => null)
+    } else {
+      handleCopy()
+    }
+  }
+
+  return (
+    <BottomSheet isOpen={isOpen} onClose={onClose} title="Convidar para o grupo">
+      <div className="space-y-4 pb-2">
+        {!code ? (
+          <>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Gere um link de convite e compartilhe com quem quiser convidar para o grupo.
+            </p>
+            <Button fullWidth onClick={handleGenerate} loading={loading} leftIcon={<Link2 className="size-4" />}>
+              Gerar link de convite
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Link de convite</p>
+            <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3">
+              <p className="text-sm text-slate-200 flex-1 truncate font-mono">{inviteUrl}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                onClick={handleCopy}
+                leftIcon={copied ? <Check className="size-4" strokeWidth={3} /> : <Copy className="size-4" />}
+              >
+                {copied ? 'Copiado!' : 'Copiar'}
+              </Button>
+              <Button onClick={handleShare} leftIcon={<Share2 className="size-4" />}>
+                Compartilhar
+              </Button>
+            </div>
+            <p className="text-xs text-slate-600 text-center">
+              Qualquer pessoa com o link pode entrar no grupo.
+            </p>
+          </>
+        )}
+      </div>
+    </BottomSheet>
   )
 }
 
