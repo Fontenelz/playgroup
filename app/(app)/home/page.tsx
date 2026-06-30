@@ -190,8 +190,8 @@ export default function HomePage() {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
           {MOCK_NOTIFICATIONS.map((notif, i) => (
             <div key={notif.id} className={cn('flex items-start gap-3 p-4', i > 0 && 'border-t border-slate-800')}>
-              <div className="size-9 rounded-xl bg-slate-800 flex items-center justify-center text-lg flex-shrink-0">
-                {notif.title[0]}
+              <div className="size-9 rounded-xl bg-slate-800 flex items-center justify-center text-lg flex-shrink-0" aria-hidden>
+                {[...notif.title][0]}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-200">{notif.title}</p>
