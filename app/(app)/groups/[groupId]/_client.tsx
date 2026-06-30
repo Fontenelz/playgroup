@@ -190,7 +190,7 @@ export default function GroupPageClient({
             />
           )}
           {tab === 'members' && (
-            <MembersTab members={members} isOrganizer={isOrganizer} group={group} currentUserId={currentUserId} onInvite={() => setShareOpen(true)} />
+            <MembersTab members={members} group={group} currentUserId={currentUserId} onInvite={() => setShareOpen(true)} />
           )}
           {tab === 'ranking' && (
             <RankingTab ranking={ranking} currentUserId={currentUserId} />
@@ -345,10 +345,9 @@ function EventCard({ event, groupId, index }: { event: EventItem; groupId: strin
 // ─── Members Tab ───────────────────────────────────────────────────────────────
 
 function MembersTab({
-  members, isOrganizer, group, currentUserId, onInvite,
+  members, group, currentUserId, onInvite,
 }: {
   members: MemberItem[]
-  isOrganizer: boolean
   group: GroupDetail
   currentUserId: string
   onInvite: () => void
@@ -410,11 +409,9 @@ function MembersTab({
         </div>
       )}
 
-      {isOrganizer && (
-        <Button variant="outline" fullWidth leftIcon={<Plus className="size-4" />} onClick={onInvite}>
-          Convidar membro
-        </Button>
-      )}
+      <Button variant="outline" fullWidth leftIcon={<Plus className="size-4" />} onClick={onInvite}>
+        Convidar membro
+      </Button>
     </div>
   )
 }
