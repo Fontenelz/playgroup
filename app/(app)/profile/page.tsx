@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Settings, LogOut, ChevronRight } from 'lucide-react'
+import { Settings, LogOut, ChevronRight, Pencil } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
@@ -38,8 +38,8 @@ export default function ProfilePage() {
       <Header
         title="Meu Perfil"
         rightAction={
-          <Link href="/profile/settings" className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400">
-            <Settings className="size-4" />
+          <Link href="/profile/edit" className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400">
+            <Pencil className="size-4" />
           </Link>
         }
       />

@@ -1,10 +1,11 @@
 'use client'
 
 import { use, useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MapPin, Clock, Users, ChevronDown, ChevronUp,
-  Check, X, AlertTriangle, Share2, Shuffle,
+  Check, X, AlertTriangle, Share2, Shuffle, DollarSign,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Header } from '@/components/layout/Header'
@@ -35,6 +36,7 @@ export default function EventPage({
   params: Promise<{ groupId: string; eventId: string }>
 }) {
   const { groupId, eventId } = use(params)
+  const router = useRouter()
 
   const event  = MOCK_EVENTS.find((e) => e.id === eventId) ?? MOCK_EVENTS[0]
   const group  = MOCK_GROUPS.find((g) => g.id === groupId) ?? MOCK_GROUPS[0]
@@ -365,12 +367,22 @@ export default function EventPage({
 
         {/* Organizer actions */}
         {isOrganizer && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="flex-1" leftIcon={<Shuffle className="size-3.5" />}>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Shuffle className="size-3.5" />}
+              onClick={() => router.push(`/groups/${groupId}/events/${eventId}/sortear`)}
+            >
               Sortear times
             </Button>
-            <Button variant="outline" size="sm" className="flex-1">
-              Editar evento
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<DollarSign className="size-3.5" />}
+              onClick={() => router.push(`/groups/${groupId}/events/${eventId}/financeiro`)}
+            >
+              Financeiro
             </Button>
           </div>
         )}

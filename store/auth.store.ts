@@ -21,6 +21,7 @@ interface AuthState {
   logout: () => void
   completeOnboarding: (data: OnboardingData) => void
   updateOnboardingData: (data: Partial<OnboardingData>) => void
+  updateUser: (data: Partial<User>) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -54,6 +55,10 @@ export const useAuthStore = create<AuthState>()(
 
       updateOnboardingData: (data: Partial<OnboardingData>) => {
         set((s: AuthState) => ({ onboardingData: { ...s.onboardingData, ...data } }))
+      },
+
+      updateUser: (data: Partial<User>) => {
+        set((s: AuthState) => ({ user: s.user ? { ...s.user, ...data } : s.user }))
       },
     }),
     {
