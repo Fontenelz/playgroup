@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -13,6 +13,7 @@ import { StepBar } from '@/components/ui/StepBar'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { SPORTS } from '@/lib/constants'
 import { formatCurrency, cn } from '@/lib/utils'
+import { createGroup } from '@/lib/actions/groups'
 import type { SportId } from '@/lib/constants'
 
 type AccessType = 'public' | 'invite' | 'private'
@@ -58,10 +59,10 @@ const PAYMENT_DAYS = ['1', '5', '10', '15', '20', '25']
 
 export default function CreateGroupPage() {
   const router = useRouter()
+  const [isPending, startTransition] = useTransition()
 
-  const [step, setStep]       = useState(1)
-  const [dir, setDir]         = useState(1)
-  const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState(1)
+  const [dir, setDir]   = useState(1)
 
   const [form, setForm] = useState<GroupForm>({
     sport:       null,
@@ -99,11 +100,21 @@ export default function CreateGroupPage() {
     setStep((s) => Math.max(s - 1, 1))
   }
 
-  async function handleSubmit() {
-    setLoading(true)
-    await new Promise((r) => setTimeout(r, 1200))
-    toast.success('Grupo criado com sucesso! 🎉')
-    router.push('/groups')
+  function handleSubmit() {
+    if (!form.sport) return
+    startTransition(async () => {
+      const result = await createGroup({
+        sport:       form.sport!,
+        name:        form.name,
+        description: form.description,
+        accessType:  form.access,
+        maxMembers:  form.maxMembers,
+        monthlyFee:  form.monthlyFee,
+        perEventFee: form.perEventFee,
+        paymentDay:  form.paymentDay,
+      })
+      if (result?.error) toast.error(result.error)
+    })
   }
 
   const monthlyFeeNum  = parseFloat(form.monthlyFee)  || 0
@@ -184,7 +195,7 @@ export default function CreateGroupPage() {
             fullWidth
             size="lg"
             onClick={handleSubmit}
-            loading={loading}
+            loading={isPending}
             leftIcon={<Check className="size-5" strokeWidth={3} />}
           >
             Criar grupo

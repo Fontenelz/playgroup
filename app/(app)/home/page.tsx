@@ -1,210 +1,145 @@
-'use client'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import HomeClient from './_client'
+import type { HomeUser, HomeGroup, HomeEvent, HomeNotification } from './_client'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { Bell, Plus, ChevronRight, Check, X } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
-import { Avatar } from '@/components/ui/Avatar'
-import { SportIcon } from '@/components/shared/SportIcon'
-import { useAuthStore } from '@/store/auth.store'
-import { MOCK_EVENTS, MOCK_GROUPS, MOCK_NOTIFICATIONS, MOCK_ME } from '@/data/mock'
-import { SPORT_MAP } from '@/lib/constants'
-import { formatDate, formatTime, cn } from '@/lib/utils'
-import toast from 'react-hot-toast'
+interface GroupRow {
+  id: string
+  name: string
+  sport: string
+}
 
-export default function HomePage() {
-  const user = useAuthStore((s) => s.user) ?? MOCK_ME
-  const unread = MOCK_NOTIFICATIONS.filter((n) => !n.is_read).length
 
-  const [eventStatuses, setEventStatuses] = useState<Record<string, 'confirmed' | 'declined' | null>>(
-    Object.fromEntries(MOCK_EVENTS.map((e) => [e.id, e.my_status === 'confirmed' ? 'confirmed' : null]))
-  )
+export default async function HomePage() {
+  const supabase = await createClient()
 
-  function confirm(eventId: string) {
-    setEventStatuses((s) => ({ ...s, [eventId]: 'confirmed' }))
-    toast.success('Presença confirmada!')
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  // Get user profile
+  const { data: profile } = await supabase
+    .from('users')
+    .select('id, name, nickname, avatar_url')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile) redirect('/onboarding')
+
+  const homeUser: HomeUser = {
+    id: profile.id,
+    name: profile.name,
+    nickname: profile.nickname,
+    avatar_url: profile.avatar_url,
   }
-  function decline(eventId: string) {
-    setEventStatuses((s) => ({ ...s, [eventId]: 'declined' }))
-    toast('Presença recusada.', { icon: '👋' })
+
+  // Get user's group memberships
+  const { data: memberships } = await supabase
+    .from('group_members')
+    .select('role, group:groups(id, name, sport)')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+
+  const groupIds: string[] = []
+  const groupMap = new Map<string, { name: string; sport: string; my_role: string }>()
+
+  for (const m of memberships ?? []) {
+    const g = (Array.isArray(m.group) ? m.group[0] : m.group) as GroupRow | null
+    if (!g) continue
+    groupIds.push(g.id)
+    groupMap.set(g.id, { name: g.name, sport: g.sport, my_role: m.role })
   }
 
-  const upcoming = MOCK_EVENTS.slice(0, 3)
+  // Get member counts for user's groups
+  const { data: allGroupMembers } = groupIds.length > 0
+    ? await supabase
+        .from('group_members')
+        .select('group_id')
+        .in('group_id', groupIds)
+        .eq('status', 'active')
+    : { data: [] }
+
+  const memberCountMap = (allGroupMembers ?? []).reduce<Record<string, number>>((acc, m) => {
+    acc[m.group_id] = (acc[m.group_id] ?? 0) + 1
+    return acc
+  }, {})
+
+  const groups: HomeGroup[] = Array.from(groupMap.entries()).map(([id, g]) => ({
+    id,
+    name: g.name,
+    sport: g.sport,
+    member_count: memberCountMap[id] ?? 0,
+    my_role: g.my_role,
+  }))
+
+  // Get upcoming events for user's groups
+  let events: HomeEvent[] = []
+  if (groupIds.length > 0) {
+    const { data: eventsRaw } = await supabase
+      .from('events')
+      .select('id, group_id, sport, starts_at, ends_at, max_participants, participant_count, group:groups(name)')
+      .in('group_id', groupIds)
+      .gt('starts_at', new Date().toISOString())
+      .eq('status', 'published')
+      .order('starts_at')
+      .limit(5)
+
+    const eventIds = (eventsRaw ?? []).map((e) => e.id)
+
+    const { data: myParticipations } = eventIds.length > 0
+      ? await supabase
+          .from('event_participants')
+          .select('event_id, status')
+          .eq('user_id', user.id)
+          .in('event_id', eventIds)
+      : { data: [] }
+
+    const myStatusMap = Object.fromEntries(
+      (myParticipations ?? []).map((p) => [p.event_id, p.status as string]),
+    )
+
+    events = (eventsRaw ?? []).map((e) => {
+      const g = (Array.isArray(e.group) ? e.group[0] : e.group) as { name: string } | null
+      return {
+        id: e.id,
+        group_id: e.group_id,
+        sport: e.sport,
+        starts_at: e.starts_at,
+        ends_at: e.ends_at,
+        max_participants: e.max_participants,
+        participant_count: e.participant_count ?? 0,
+        my_status: myStatusMap[e.id] ?? null,
+        group_name: g?.name ?? '',
+      }
+    })
+  }
+
+  // Get recent notifications
+  const { data: notifRaw } = await supabase
+    .from('notifications')
+    .select('id, type, title, body, data, is_read, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(3)
+
+  const notifications: HomeNotification[] = (notifRaw ?? []).map((n) => ({
+    id: n.id,
+    type: n.type,
+    title: n.title,
+    body: n.body,
+    data: (n.data ?? {}) as Record<string, string>,
+    is_read: n.is_read ?? false,
+    created_at: n.created_at,
+  }))
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length
 
   return (
-    <div className="flex flex-col gap-6 px-4 pt-5 pb-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-slate-400">Olá,</p>
-          <h1 className="text-xl font-bold text-slate-100">{user.nickname} 👋</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/notifications" className="relative size-10 flex items-center justify-center rounded-xl hover:bg-slate-800 transition-colors">
-            <Bell className="size-5 text-slate-400" />
-            {unread > 0 && (
-              <span className="absolute top-1.5 right-1.5 size-4 bg-primary-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center">
-                {unread}
-              </span>
-            )}
-          </Link>
-          <Link href="/profile">
-            <Avatar name={user.name} src={user.avatar_url} size="sm" />
-          </Link>
-        </div>
-      </div>
-
-      {/* Próximos eventos */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Próximos eventos</h2>
-          <Link href="/groups" className="text-xs text-primary-400 font-medium">Ver todos</Link>
-        </div>
-
-        <div className="space-y-3">
-          {upcoming.map((event, i) => {
-            const status = eventStatuses[event.id]
-            const group = MOCK_GROUPS.find((g) => g.id === event.group_id)
-            const sport = SPORT_MAP[event.sport]
-            const slots = event.max_participants - event.participant_count
-            const date = formatDate(event.starts_at, { weekday: 'short', day: '2-digit', month: '2-digit' })
-            const time = formatTime(event.starts_at)
-
-            return (
-              <motion.div
-                key={event.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.07 }}
-              >
-                <Link href={`/groups/${event.group_id}/events/${event.id}`}>
-                  <div className={cn(
-                    'bg-slate-900 border rounded-2xl p-4 transition-all active:scale-[0.99]',
-                    status === 'confirmed' ? 'border-primary-500/30' : 'border-slate-800 hover:border-slate-700',
-                  )}>
-                    <div className="flex items-start gap-3 mb-3">
-                      <SportIcon sport={event.sport} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-100 truncate">{group?.name}</p>
-                        <p className="text-xs text-slate-400 capitalize mt-0.5">
-                          {date} · {time}
-                        </p>
-                      </div>
-                      {status === 'confirmed' && (
-                        <Badge variant="success" size="sm">Confirmado</Badge>
-                      )}
-                      {status === 'declined' && (
-                        <Badge variant="error" size="sm">Recusado</Badge>
-                      )}
-                    </div>
-
-                    {/* Slots bar */}
-                    <div className="space-y-1.5 mb-3">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">{event.participant_count}/{event.max_participants} confirmados</span>
-                        <span className={cn('font-medium', slots > 0 ? 'text-primary-400' : 'text-amber-400')}>
-                          {slots > 0 ? `${slots} vagas` : 'Lotado'}
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${(event.participant_count / event.max_participants) * 100}%` }}
-                          transition={{ duration: 0.6, delay: i * 0.07 + 0.2 }}
-                          className="h-full bg-primary-500 rounded-full"
-                        />
-                      </div>
-                    </div>
-
-                    {/* CTA */}
-                    {status === null && (
-                      <div className="flex gap-2" onClick={(e) => e.preventDefault()}>
-                        <Button
-                          size="sm"
-                          fullWidth
-                          onClick={() => confirm(event.id)}
-                          leftIcon={<Check className="size-3.5" strokeWidth={3} />}
-                        >
-                          Confirmar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => decline(event.id)}
-                          className="px-3"
-                        >
-                          <X className="size-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </Link>
-              </motion.div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* Meus grupos */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Meus grupos</h2>
-          <Link href="/groups" className="text-xs text-primary-400 font-medium">Ver todos</Link>
-        </div>
-
-        <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-          {MOCK_GROUPS.map((group) => (
-            <Link key={group.id} href={`/groups/${group.id}`}>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex-shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 w-44 hover:border-slate-700 transition-all active:scale-95"
-              >
-                <SportIcon sport={group.sport} size="md" className="mb-3" />
-                <p className="text-xs font-semibold text-slate-200 leading-snug line-clamp-2 mb-1">{group.name}</p>
-                <p className="text-[11px] text-slate-500">{group.member_count} membros</p>
-                {group.my_role === 'admin' && (
-                  <Badge variant="primary" size="sm" className="mt-2">Admin</Badge>
-                )}
-              </motion.div>
-            </Link>
-          ))}
-
-          {/* Add group */}
-          <Link href="/groups/create">
-            <div className="flex-shrink-0 w-44 h-full min-h-[140px] border border-dashed border-slate-700 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary-500/50 hover:bg-primary-500/5 transition-all">
-              <div className="size-10 rounded-xl bg-slate-800 flex items-center justify-center">
-                <Plus className="size-5 text-slate-400" />
-              </div>
-              <span className="text-xs text-slate-500">Novo grupo</span>
-            </div>
-          </Link>
-        </div>
-      </section>
-
-      {/* Atividade recente */}
-      <section>
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Atividade recente</h2>
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-          {MOCK_NOTIFICATIONS.map((notif, i) => (
-            <div key={notif.id} className={cn('flex items-start gap-3 p-4', i > 0 && 'border-t border-slate-800')}>
-              <div className="size-9 rounded-xl bg-slate-800 flex items-center justify-center text-lg flex-shrink-0" aria-hidden>
-                {[...notif.title][0]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-200">{notif.title}</p>
-                <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{notif.body}</p>
-              </div>
-              {!notif.is_read && <div className="size-2 rounded-full bg-primary-500 flex-shrink-0 mt-1.5" />}
-            </div>
-          ))}
-          <Link href="/notifications" className="flex items-center justify-center gap-1 p-3 border-t border-slate-800 text-xs text-slate-500 hover:text-primary-400 transition-colors">
-            Ver todas as notificações <ChevronRight className="size-3" />
-          </Link>
-        </div>
-      </section>
-    </div>
+    <HomeClient
+      user={homeUser}
+      groups={groups}
+      events={events}
+      notifications={notifications}
+      unreadCount={unreadCount}
+    />
   )
 }

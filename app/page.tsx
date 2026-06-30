@@ -1,26 +1,23 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/store/auth.store'
+export default async function RootPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-export default function RootPage() {
-  const router = useRouter()
-  const { isAuthenticated, onboardingComplete } = useAuthStore()
+  if (!user) {
+    redirect('/login')
+  }
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace('/login')
-    } else if (!onboardingComplete) {
-      router.replace('/onboarding')
-    } else {
-      router.replace('/home')
-    }
-  }, [isAuthenticated, onboardingComplete, router])
+  const { data: profile } = await supabase
+    .from('users')
+    .select('city')
+    .eq('id', user.id)
+    .single()
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950">
-      <div className="size-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
+  if (!profile?.city) {
+    redirect('/onboarding')
+  }
+
+  redirect('/home')
 }

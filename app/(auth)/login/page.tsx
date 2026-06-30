@@ -1,40 +1,69 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useTransition } from 'react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { Mail, Eye, EyeOff } from 'lucide-react'
+import { Mail, Eye, EyeOff, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { useAuthStore } from '@/store/auth.store'
+import { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail } from '@/lib/actions/auth'
+
+type EmailMode = 'signin' | 'signup'
 
 export default function LoginPage() {
-  const router = useRouter()
-  const login = useAuthStore((s) => s.login)
+  const [isPending, startTransition] = useTransition()
   const [showEmail, setShowEmail] = useState(false)
+  const [emailMode, setEmailMode] = useState<EmailMode>('signin')
   const [showPass, setShowPass] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState<string | null>(null)
+  const [loadingAction, setLoadingAction] = useState<string | null>(null)
 
-  async function handleOAuth(method: 'google' | 'apple') {
-    setLoading(method)
-    await new Promise((r) => setTimeout(r, 1200))
-    login(method)
-    toast.success('Login realizado!')
-    router.push('/onboarding')
+  function handleOAuth(provider: 'google' | 'apple') {
+    setLoadingAction(provider)
+    startTransition(async () => {
+      const action = provider === 'google' ? signInWithGoogle : signInWithApple
+      const result = await action()
+      if (result?.error) {
+        toast.error(result.error)
+        setLoadingAction(null)
+      }
+      // Sem erro → server action executou redirect(), navegação acontece automaticamente
+    })
   }
 
-  async function handleEmail(e: React.FormEvent) {
+  function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email || !password) return
-    setLoading('email')
-    await new Promise((r) => setTimeout(r, 1000))
-    login('email')
-    toast.success('Login realizado!')
-    router.push('/onboarding')
+
+    setLoadingAction('email')
+    startTransition(async () => {
+      if (emailMode === 'signup') {
+        const result = await signUpWithEmail(email, password)
+        if (result?.error) {
+          toast.error(result.error)
+        } else {
+          toast.success(result?.success ?? 'Verifique seu email!')
+          setShowEmail(false)
+        }
+        setLoadingAction(null)
+        return
+      }
+
+      const result = await signInWithEmail(email, password)
+      if (result?.error) {
+        toast.error(
+          result.error === 'Invalid login credentials'
+            ? 'Email ou senha incorretos.'
+            : result.error,
+        )
+        setLoadingAction(null)
+      }
+      // Sem erro → redirect() foi chamado pelo server action
+    })
   }
+
+  const isLoading = isPending || loadingAction !== null
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
@@ -64,7 +93,8 @@ export default function LoginPage() {
           fullWidth
           variant="outline"
           size="lg"
-          loading={loading === 'google'}
+          loading={loadingAction === 'google'}
+          disabled={isLoading}
           onClick={() => handleOAuth('google')}
           leftIcon={
             <svg className="size-5" viewBox="0 0 24 24">
@@ -83,7 +113,8 @@ export default function LoginPage() {
           fullWidth
           variant="outline"
           size="lg"
-          loading={loading === 'apple'}
+          loading={loadingAction === 'apple'}
+          disabled={isLoading}
           onClick={() => handleOAuth('apple')}
           leftIcon={
             <svg className="size-5 fill-slate-100" viewBox="0 0 24 24">
@@ -116,7 +147,7 @@ export default function LoginPage() {
           <motion.form
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            onSubmit={handleEmail}
+            onSubmit={handleEmailSubmit}
             className="space-y-3"
           >
             <Input
@@ -139,9 +170,24 @@ export default function LoginPage() {
                 </button>
               }
             />
-            <Button fullWidth size="lg" type="submit" loading={loading === 'email'}>
-              Entrar
+            <Button
+              fullWidth
+              size="lg"
+              type="submit"
+              loading={loadingAction === 'email'}
+              disabled={isLoading || !email || !password}
+            >
+              {emailMode === 'signup' ? 'Criar conta' : 'Entrar'}
             </Button>
+
+            <button
+              type="button"
+              onClick={() => setEmailMode((m) => m === 'signin' ? 'signup' : 'signin')}
+              className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-500 hover:text-primary-400 transition-colors py-1"
+            >
+              <UserPlus className="size-3.5" />
+              {emailMode === 'signin' ? 'Não tem conta? Criar agora' : 'Já tem conta? Entrar'}
+            </button>
           </motion.form>
         )}
       </motion.div>

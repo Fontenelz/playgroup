@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayGroup — Documento de Produto</title>
+<style>
+  :root {
+    --primary: #22c55e;
+    --primary-dark: #16a34a;
+    --primary-light: #dcfce7;
+    --accent: #f97316;
+    --bg: #0f172a;
+    --bg2: #1e293b;
+    --bg3: #334155;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --border: #334155;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --info: #3b82f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  /* SIDEBAR */
+  .sidebar {
+    position: fixed; top: 0; left: 0;
+    width: 260px; height: 100vh;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 24px 0;
+    z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .sidebar-logo .logo-text {
+    font-size: 20px; font-weight: 700;
+    color: var(--primary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sidebar-logo .slogan {
+    font-size: 11px; color: var(--text2); margin-top: 4px;
+  }
+  .sidebar nav a {
+    display: block; padding: 8px 20px;
+    color: var(--text2); text-decoration: none;
+    font-size: 13px; border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .sidebar nav a:hover, .sidebar nav a.active {
+    color: var(--primary); background: rgba(34,197,94,.07);
+    border-left-color: var(--primary);
+  }
+  .sidebar nav .nav-section {
+    font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    color: var(--text2); padding: 16px 20px 6px;
+    text-transform: uppercase;
+  }
+  /* MAIN */
+  .main { margin-left: 260px; padding: 40px 48px; max-width: 1100px; }
+  /* SECTIONS */
+  .section { margin-bottom: 64px; }
+  h1 { font-size: 32px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  h2 { font-size: 22px; font-weight: 700; color: var(--primary); margin: 48px 0 16px;
+       padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 17px; font-weight: 600; color: var(--text); margin: 28px 0 12px; }
+  h4 { font-size: 14px; font-weight: 600; color: var(--text2); margin: 20px 0 8px; text-transform: uppercase; letter-spacing: .06em; }
+  p { color: var(--text2); margin-bottom: 12px; }
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1a2e1a 50%, #0f172a 100%);
+    border: 1px solid var(--border); border-radius: 16px;
+    padding: 48px; margin-bottom: 48px; position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '🏆'; position: absolute; right: 48px; top: 50%;
+    transform: translateY(-50%); font-size: 120px; opacity: .1;
+  }
+  .hero .badge {
+    display: inline-block; background: rgba(34,197,94,.15); color: var(--primary);
+    border: 1px solid rgba(34,197,94,.3); border-radius: 100px;
+    padding: 4px 12px; font-size: 12px; font-weight: 600; margin-bottom: 16px;
+  }
+  .hero h1 { font-size: 40px; margin-bottom: 8px; }
+  .hero .slogan { font-size: 18px; color: var(--text2); margin-bottom: 24px; }
+  .hero-meta { display: flex; gap: 24px; flex-wrap: wrap; }
+  .hero-meta .meta-item { font-size: 13px; color: var(--text2); }
+  .hero-meta .meta-item strong { color: var(--text); }
+  /* CARDS GRID */
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 16px; margin: 20px 0; }
+  .card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+    transition: border-color 0.15s;
+  }
+  .card:hover { border-color: var(--primary); }
+  .card .card-icon { font-size: 28px; margin-bottom: 12px; }
+  .card .card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .card .card-desc { font-size: 13px; color: var(--text2); }
+  /* TABLE */
+  .table-wrap { overflow-x: auto; margin: 16px 0; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: var(--bg3); color: var(--text2); font-size: 12px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: 10px 14px; text-align: left;
+  }
+  td { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text2); }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .check { color: var(--success); }
+  .cross { color: var(--error); }
+  /* CODE */
+  pre {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; overflow-x: auto; margin: 16px 0;
+    font-family: 'Fira Code', 'Consolas', monospace; font-size: 13px;
+    line-height: 1.7; color: #e2e8f0;
+  }
+  code { font-family: 'Fira Code', 'Consolas', monospace; font-size: 13px; }
+  .inline-code {
+    background: var(--bg3); color: var(--primary); border-radius: 4px;
+    padding: 2px 6px; font-size: 12px;
+  }
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; gap: 4px;
+           border-radius: 100px; padding: 3px 10px; font-size: 12px; font-weight: 600; }
+  .badge-green { background: rgba(34,197,94,.15); color: #4ade80; }
+  .badge-orange { background: rgba(249,115,22,.15); color: #fb923c; }
+  .badge-red { background: rgba(239,68,68,.15); color: #f87171; }
+  .badge-blue { background: rgba(59,130,246,.15); color: #60a5fa; }
+  .badge-gray { background: rgba(148,163,184,.1); color: #94a3b8; }
+  /* WIREFRAME */
+  .wireframe {
+    background: #0d1117; border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; font-family: 'Fira Code', monospace; font-size: 12px;
+    color: #7dd3fc; line-height: 1.6; margin: 16px 0;
+  }
+  /* ROLE BLOCKS */
+  .role-block {
+    border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; margin: 20px 0;
+  }
+  .role-header {
+    padding: 16px 20px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .role-header.admin { background: rgba(239,68,68,.08); }
+  .role-header.organizer { background: rgba(249,115,22,.08); }
+  .role-header.participant { background: rgba(59,130,246,.08); }
+  .role-header .role-icon { font-size: 24px; }
+  .role-header .role-name { font-size: 16px; font-weight: 700; }
+  .role-body { padding: 20px; }
+  .role-body ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .role-body ul li { font-size: 13px; color: var(--text2); display: flex; align-items: flex-start; gap: 8px; }
+  .role-body ul li::before { content: '→'; color: var(--primary); flex-shrink: 0; }
+  /* FLOW */
+  .flow {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; margin: 16px 0;
+  }
+  .flow-step {
+    display: flex; gap: 16px; align-items: flex-start;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-step .step-num {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--primary); color: #000;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .flow-step .step-text { font-size: 14px; color: var(--text2); padding-top: 4px; }
+  .flow-step .step-text strong { color: var(--text); }
+  /* COLORS */
+  .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 12px; margin: 16px 0; }
+  .color-swatch { border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+  .color-swatch .swatch { height: 56px; }
+  .color-swatch .swatch-info { padding: 8px; background: var(--bg2); }
+  .color-swatch .swatch-name { font-size: 11px; font-weight: 600; color: var(--text); }
+  .color-swatch .swatch-val { font-size: 10px; color: var(--text2); }
+  /* ROADMAP */
+  .roadmap-phase {
+    border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; margin: 20px 0;
+  }
+  .roadmap-header {
+    padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .roadmap-header.mvp { background: rgba(34,197,94,.08); }
+  .roadmap-header.v1  { background: rgba(59,130,246,.08); }
+  .roadmap-header.v2  { background: rgba(249,115,22,.08); }
+  .roadmap-header.v3  { background: rgba(139,92,246,.08); }
+  .roadmap-header h3 { margin: 0; border: none; color: var(--text); font-size: 16px; }
+  .roadmap-body { padding: 20px; }
+  .roadmap-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,.04); font-size: 13px;
+  }
+  .roadmap-item:last-child { border-bottom: none; }
+  .p0 { color: #f87171; }
+  .p1 { color: #fb923c; }
+  .p2 { color: #94a3b8; }
+  .effort { color: var(--text2); font-size: 12px; }
+  /* PLAN BOX */
+  .plans-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 16px; margin: 20px 0; }
+  .plan-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 24px;
+  }
+  .plan-card.featured { border-color: var(--primary); }
+  .plan-card .plan-name { font-size: 14px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .08em; }
+  .plan-card .plan-price { font-size: 28px; font-weight: 800; color: var(--text); margin: 8px 0; }
+  .plan-card .plan-price span { font-size: 14px; font-weight: 400; color: var(--text2); }
+  .plan-card ul { list-style: none; margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .plan-card ul li { font-size: 13px; color: var(--text2); display: flex; gap: 8px; align-items: flex-start; }
+  .plan-card ul li::before { content: '✓'; color: var(--primary); }
+  /* DB TABLE */
+  .db-table { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; margin: 20px 0; overflow: hidden; }
+  .db-table-header { padding: 14px 20px; background: var(--bg3); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .db-table-header .table-name { font-family: monospace; font-size: 15px; font-weight: 700; color: var(--primary); }
+  .db-table-body { padding: 16px 20px; }
+  .db-field { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 13px; }
+  .db-field:last-child { border-bottom: none; }
+  .db-field .field-name { font-family: monospace; color: #7dd3fc; min-width: 180px; }
+  .db-field .field-type { color: #c084fc; min-width: 100px; }
+  .db-field .field-desc { color: var(--text2); }
+  /* NOTIFICATION */
+  .notif-list { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
+  .notif-item {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; display: flex; gap: 12px;
+  }
+  .notif-icon { font-size: 20px; flex-shrink: 0; }
+  .notif-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .notif-body { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  /* DESIGN TOKENS */
+  .tokens-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .token-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .token-card h4 { color: var(--primary); font-size: 12px; margin-bottom: 12px; }
+  .token-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 12px; }
+  .token-row:last-child { border-bottom: none; }
+  .token-name { color: var(--text2); font-family: monospace; }
+  .token-val { color: var(--text); font-family: monospace; }
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 24px 20px; }
+    .role-body ul { grid-template-columns: 1fr; }
+    .tokens-grid { grid-template-columns: 1fr; }
+  }
+  /* TOC HIGHLIGHT */
+  .toc-active { color: var(--primary) !important; border-left-color: var(--primary) !important; background: rgba(34,197,94,.07) !important; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-text">🏆 PlayGroup</div>
+    <div class="slogan">Documento de Produto v1.0</div>
+  </div>
+  <nav>
+    <div class="nav-section">Produto</div>
+    <a href="#visao">Visão Geral</a>
+    <a href="#perfis">Perfis e Permissões</a>
+    <a href="#funcionalidades">Funcionalidades</a>
+
+    <div class="nav-section">Design</div>
+    <a href="#ux">UX/UI — Telas</a>
+    <a href="#design-system">Design System</a>
+
+    <div class="nav-section">Engenharia</div>
+    <a href="#arquitetura">Arquitetura Next.js</a>
+    <a href="#banco">Banco de Dados</a>
+    <a href="#roadmap">Roadmap</a>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- HERO -->
+  <div class="hero" id="visao">
+    <div class="badge">PRD — Documento de Produto Completo</div>
+    <h1>PlayGroup</h1>
+    <p class="slogan">"Organize qualquer esporte ou evento recorrente sem listas no WhatsApp."</p>
+    <div class="hero-meta">
+      <div class="meta-item"><strong>Stack</strong><br>Next.js 15 · TypeScript · TailwindCSS · Supabase</div>
+      <div class="meta-item"><strong>Plataforma</strong><br>Web PWA Mobile-first</div>
+      <div class="meta-item"><strong>Versão</strong><br>1.0.0 (MVP)</div>
+      <div class="meta-item"><strong>Modelo</strong><br>SaaS Multi-tenant</div>
+    </div>
+  </div>
+
+  <!-- 1. VISÃO GERAL -->
+  <section class="section">
+    <h2>1. Visão Geral do Produto</h2>
+
+    <h3>Problema que Resolve</h3>
+    <p>Grupos de esportes e atividades recorrentes dependem hoje de listas manuais no WhatsApp, planilhas desatualizadas e cobrança informal de PIX. Sem controle real de presença, fila de espera ou histórico financeiro.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-num">!</div>
+        <div class="step-text"><strong>Exemplo real:</strong> Carlos administra o "Futebol Quinta São Luís" com 10 jogadores fixos e 5 na lista de espera. Toda quarta-feira posta a lista no WhatsApp, edita manualmente quem confirmou, cobra PIX no privado, e na quinta sempre faltam 2 jogadores — Pedro saiu sem avisar, Rafael ficou esperando ser chamado e não foi.</div>
+      </div>
+    </div>
+
+    <h3>Atividades Suportadas</h3>
+    <div class="cards-grid">
+      <div class="card"><div class="card-icon">⚽</div><div class="card-title">Futebol / Futsal</div><div class="card-desc">Society, campo, quadra. Sorteio de times por nível.</div></div>
+      <div class="card"><div class="card-icon">🏐</div><div class="card-title">Vôlei</div><div class="card-desc">Praia e quadra. Ex: Vôlei Arena Calhau.</div></div>
+      <div class="card"><div class="card-icon">🏖️</div><div class="card-title">Beach Tennis</div><div class="card-desc">Ex: Beach Tennis Weekend.</div></div>
+      <div class="card"><div class="card-icon">🎾</div><div class="card-title">Tênis</div><div class="card-desc">Torneios e raquetes.</div></div>
+      <div class="card"><div class="card-icon">🏀</div><div class="card-title">Basquete</div><div class="card-desc">Estatísticas de pontos e assistências.</div></div>
+      <div class="card"><div class="card-icon">🏎️</div><div class="card-title">Kart</div><div class="card-desc">Ex: Kart Maranhão. Ranking de tempos.</div></div>
+      <div class="card"><div class="card-icon">🚴</div><div class="card-title">Ciclismo</div><div class="card-desc">Rotas e grupos de pedal.</div></div>
+      <div class="card"><div class="card-icon">🍖</div><div class="card-title">Churrascos</div><div class="card-desc">Eventos privados e confraternizações.</div></div>
+    </div>
+
+    <h3>Diferenciais vs. Appito</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Feature</th><th>Appito</th><th>PlayGroup</th></tr>
+        <tr><td>Esportes suportados</td><td>Futebol/Futsal</td><td><span class="badge badge-green">Qualquer atividade</span></td></tr>
+        <tr><td>Sorteio de times</td><td>Sim</td><td>Sim + balanceamento por nível</td></tr>
+        <tr><td>Mensalistas</td><td>Sim</td><td>Sim + liberação automática</td></tr>
+        <tr><td>Fila de espera</td><td>Sim</td><td>Sim + notificação push em tempo real</td></tr>
+        <tr><td>Financeiro</td><td>Básico</td><td>PIX + relatórios + inadimplência</td></tr>
+        <tr><td>Multi-tenant SaaS</td><td>Não</td><td><span class="badge badge-green">Sim, desde o MVP</span></td></tr>
+        <tr><td>PWA instalável</td><td>Não</td><td><span class="badge badge-green">Sim</span></td></tr>
+        <tr><td>QR Code de entrada</td><td>Não</td><td><span class="badge badge-green">Sim</span></td></tr>
+        <tr><td>Eventos não-esportivos</td><td>Não</td><td><span class="badge badge-green">Sim</span></td></tr>
+      </table>
+    </div>
+
+    <h3>Modelo de Negócio</h3>
+    <div class="plans-grid">
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price">R$ 0<span>/mês</span></div>
+        <ul>
+          <li>1 grupo</li>
+          <li>Até 15 participantes</li>
+          <li>Eventos ilimitados</li>
+          <li>Sem financeiro</li>
+        </ul>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">R$ 29<span>/mês</span></div>
+        <ul>
+          <li>3 grupos</li>
+          <li>Até 30 participantes</li>
+          <li>Financeiro básico (PIX)</li>
+          <li>Suporte por email</li>
+        </ul>
+      </div>
+      <div class="plan-card featured">
+        <div class="plan-name">Pro ⭐</div>
+        <div class="plan-price">R$ 79<span>/mês</span></div>
+        <ul>
+          <li>10 grupos</li>
+          <li>Participantes ilimitados</li>
+          <li>Financeiro completo</li>
+          <li>Relatórios e export</li>
+          <li>Suporte prioritário</li>
+        </ul>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Business</div>
+        <div class="plan-price">R$ 199<span>/mês</span></div>
+        <ul>
+          <li>Grupos ilimitados</li>
+          <li>White-label</li>
+          <li>API pública</li>
+          <li>Painel centralizado</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. PERFIS -->
+  <section class="section" id="perfis">
+    <h2>2. Perfis de Usuário e Permissões</h2>
+
+    <div class="role-block">
+      <div class="role-header admin">
+        <div class="role-icon">👑</div>
+        <div>
+          <div class="role-name">Administrador</div>
+          <div style="font-size:12px;color:var(--text2)">Criador do grupo — controle total</div>
+        </div>
+      </div>
+      <div class="role-body">
+        <ul>
+          <li>Criar e excluir grupos</li>
+          <li>Promover / rebaixar organizadores</li>
+          <li>Gerenciar assinatura do plano</li>
+          <li>Transferir administração</li>
+          <li>Banir participantes</li>
+          <li>Configurações completas do grupo</li>
+          <li>Ver financeiro de todos</li>
+          <li>Encerrar grupo (soft delete 30 dias)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="role-block">
+      <div class="role-header organizer">
+        <div class="role-icon">🎯</div>
+        <div>
+          <div class="role-name">Organizador</div>
+          <div style="font-size:12px;color:var(--text2)">Até 5 por grupo (plano Pro)</div>
+        </div>
+      </div>
+      <div class="role-body">
+        <ul>
+          <li>Criar eventos únicos e recorrentes</li>
+          <li>Editar e cancelar eventos</li>
+          <li>Definir mensalistas e vagas</li>
+          <li>Aprovar novos membros</li>
+          <li>Gerenciar fila de espera</li>
+          <li>Marcar pagamentos como recebidos</li>
+          <li>Realizar sorteio de times</li>
+          <li>Registrar gols e assistências</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="role-block">
+      <div class="role-header participant">
+        <div class="role-icon">👤</div>
+        <div>
+          <div class="role-name">Participante</div>
+          <div style="font-size:12px;color:var(--text2)">Mensalista ou Avulso</div>
+        </div>
+      </div>
+      <div class="role-body">
+        <ul>
+          <li>Confirmar / recusar presença</li>
+          <li>Entrar e sair da fila de espera</li>
+          <li>Visualizar lista de participantes</li>
+          <li>Visualizar pagamentos próprios</li>
+          <li>Ver ranking do grupo</li>
+          <li>Notificar ausência antecipada</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Matriz de Permissões</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Ação</th><th>Admin</th><th>Organizer</th><th>Participant</th><th>Guest</th></tr>
+        <tr><td>Criar grupo</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+        <tr><td>Excluir grupo</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+        <tr><td>Criar evento</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+        <tr><td>Cancelar evento</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+        <tr><td>Definir mensalistas</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+        <tr><td>Aprovar participantes</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+        <tr><td>Gerenciar pagamentos</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+        <tr><td>Confirmar presença</td><td class="check">✅</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td></tr>
+        <tr><td>Entrar na fila</td><td class="check">✅</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td></tr>
+        <tr><td>Ver participantes</td><td class="check">✅</td><td class="check">✅</td><td class="check">✅</td><td class="check">✅</td></tr>
+        <tr><td>Ver pagamentos alheios</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+        <tr><td>Sortear times</td><td class="check">✅</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+        <tr><td>Banir participante</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- 3. FUNCIONALIDADES -->
+  <section class="section" id="funcionalidades">
+    <h2>3. Funcionalidades Detalhadas</h2>
+
+    <h3>3.1 Autenticação</h3>
+    <div class="cards-grid">
+      <div class="card"><div class="card-icon">🔵</div><div class="card-title">Google OAuth</div><div class="card-desc">Login com conta Google via Supabase Auth.</div></div>
+      <div class="card"><div class="card-icon">⚫</div><div class="card-title">Apple Sign In</div><div class="card-desc">Login com Apple ID (obrigatório para iOS).</div></div>
+      <div class="card"><div class="card-icon">📧</div><div class="card-title">Email + Senha</div><div class="card-desc">Confirmação de email obrigatória. Rate limit 5x/10min.</div></div>
+      <div class="card"><div class="card-icon">💬</div><div class="card-title">WhatsApp (futuro)</div><div class="card-desc">OTP via Z-API. Planejado para V1.</div></div>
+    </div>
+
+    <h3>3.2 Fila de Espera — Regras Completas</h3>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-num">1</div>
+        <div class="step-text"><strong>Rafael (mensalista) cancela presença</strong> no evento de quinta.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Sistema identifica <strong>André</strong> como primeiro da fila (posição 1).</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Push notification: <em>"🎉 Uma vaga abriu! Você tem <strong>30 minutos</strong> para confirmar."</em></div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">4a</div>
+        <div class="step-text"><strong>André confirma em 15min</strong> → Status = CONFIRMED. Thiago sobe para posição 1.</div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">4b</div>
+        <div class="step-text"><strong>André não responde</strong> → vai para o final da fila. Thiago é notificado.</div>
+      </div>
+    </div>
+
+    <h3>3.3 Mensalistas — Ciclo Completo</h3>
+    <pre>Dia  1 do mês → Cobrança gerada (R$ 60,00) + notificação
+Dia  5 (venc.) → Pago: ativo ✅ | Não pago: aviso de inadimplência ⚠️
+Dia 10 (grace) → Vaga suspensa se não pago. Organizador notificado.
+
+Por evento (ex: toda quinta-feira):
+  Dom 18h → Sistema cria evento para quinta
+  Seg 08h → Notificação para mensalistas confirmarem
+  Ter 22h → Prazo de confirmação dos mensalistas
+  Qua 08h → Vagas não confirmadas → liberadas para fila de espera
+  Qua 12h → Notificação para fila de espera
+  Qui 19h → Lembrete: 1h antes do evento
+  Qui 21h30 → Evento encerrado → organizador registra presença
+  Sex 09h → Cobrança avulso gerada</pre>
+
+    <h3>3.4 Financeiro</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Tipo</th><th>Exemplo</th><th>MVP</th><th>V2</th></tr>
+        <tr><td>Mensalidade</td><td>R$ 60,00/mês — Matheus</td><td class="check">✅ Manual</td><td>PIX auto</td></tr>
+        <tr><td>Avulso por evento</td><td>R$ 15,00 — Bruno (03/07)</td><td class="check">✅ Manual</td><td>PIX auto</td></tr>
+        <tr><td>Multa cancelamento</td><td>R$ 10,00 — Pedro (2h antes)</td><td class="check">✅</td><td>Auto</td></tr>
+        <tr><td>PIX gerado</td><td>QR Code na tela de pagamento</td><td class="check">✅</td><td>Webhook</td></tr>
+        <tr><td>Relatório mensal</td><td>Export CSV/PDF</td><td class="cross">❌</td><td class="check">✅</td></tr>
+        <tr><td>Cartão recorrente</td><td>Assinatura no cartão</td><td class="cross">❌</td><td class="check">✅</td></tr>
+      </table>
+    </div>
+
+    <h3>3.5 Sorteio de Times</h3>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-icon">🎲</div>
+        <div class="card-title">Aleatório</div>
+        <div class="card-desc">Distribuição randômica dos confirmados em N times iguais.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚖️</div>
+        <div class="card-title">Balanceado por Nível</div>
+        <div class="card-desc">Algoritmo snake draft. Diferença máxima de 2★ entre times.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">👑</div>
+        <div class="card-title">Capitães (Draft)</div>
+        <div class="card-desc">2 capitães sorteados escolhem alternadamente. App guia o draft.</div>
+      </div>
+    </div>
+
+    <h3>3.6 Ranking e Estatísticas — Exemplo Real</h3>
+    <pre>RANKING — JULHO 2025 | "Futebol Quinta São Luís"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🥇  1. Matheus    12 presenças  | 8 gols | 5 assists
+🥈  2. Rafael     11 presenças  | 5 gols | 3 assists
+🥉  3. João       10 presenças  | 3 gols | 7 assists
+    4. Carlos      9 presenças  | 6 gols | 2 assists
+    5. Pedro       9 presenças  | 2 gols | 4 assists
+    6. Felipe      8 presenças  | 4 gols | 1 assist
+    7. Gabriel     7 presenças  | 1 gol  | 6 assists
+    8. Lucas       6 presenças  | 0 gols | 3 assists
+    9. Bruno       5 presenças  | 2 gols | 0 assists
+   10. Diego       4 presenças  | 3 gols | 2 assists</pre>
+
+    <h3>3.7 Notificações Push</h3>
+    <div class="notif-list">
+      <div class="notif-item"><div class="notif-icon">🏆</div><div><div class="notif-title">Evento criado</div><div class="notif-body">"Novo evento: Futebol Quinta São Luís — 03/07 às 20h. Confirme sua presença!"</div></div></div>
+      <div class="notif-item"><div class="notif-icon">🎉</div><div><div class="notif-title">Vaga liberada (fila)</div><div class="notif-body">"André, uma vaga abriu no Futebol Quinta! Você tem 30 minutos para confirmar."</div></div></div>
+      <div class="notif-item"><div class="notif-icon">❌</div><div><div class="notif-title">Evento cancelado</div><div class="notif-body">"Futebol Quinta São Luís — 03/07 foi cancelado. Motivo: chuva forte."</div></div></div>
+      <div class="notif-item"><div class="notif-icon">✅</div><div><div class="notif-title">Pagamento recebido</div><div class="notif-body">"Seu pagamento de R$ 60,00 foi confirmado. Mensalidade julho quitada!"</div></div></div>
+      <div class="notif-item"><div class="notif-icon">⚠️</div><div><div class="notif-title">Mensalidade vencendo</div><div class="notif-body">"Sua mensalidade vence em 2 dias. Pague agora para manter sua vaga garantida."</div></div></div>
+      <div class="notif-item"><div class="notif-icon">⚽</div><div><div class="notif-title">Times sorteados</div><div class="notif-body">"Os times de quinta foram sorteados! Você está no Time A com Rafael e Felipe."</div></div></div>
+      <div class="notif-item"><div class="notif-icon">⏱️</div><div><div class="notif-title">Lembrete pré-evento</div><div class="notif-body">"Daqui 1 hora tem Futebol Quinta São Luís! Não esqueça de chegar cedo."</div></div></div>
+    </div>
+  </section>
+
+  <!-- 4. UX/UI -->
+  <section class="section" id="ux">
+    <h2>4. UX/UI — Telas e Fluxos</h2>
+
+    <h3>4.1 Onboarding (5 steps)</h3>
+    <div class="wireframe">STEP 1 — Boas-vindas
+┌──────────────────────────────────┐
+│                                  │
+│           🏆 PlayGroup           │
+│                                  │
+│  "Organize qualquer esporte      │
+│   sem listas no WhatsApp"        │
+│                                  │
+│  ┌──────────────────────────┐    │
+│  │  🔵  Entrar com Google  │    │
+│  └──────────────────────────┘    │
+│  ┌──────────────────────────┐    │
+│  │  ⚫  Entrar com Apple   │    │
+│  └──────────────────────────┘    │
+│  ┌──────────────────────────┐    │
+│  │  📧  Entrar com Email   │    │
+│  └──────────────────────────┘    │
+│                                  │
+│      Já tem conta? Fazer login   │
+└──────────────────────────────────┘</div>
+
+    <div class="wireframe">STEP 4 — Esportes favoritos
+┌──────────────────────────────────┐
+│  ←                   3 de 4      │
+│                                  │
+│  Quais atividades você pratica?  │
+│                                  │
+│  [⚽ Futebol ✓] [🏐 Vôlei ✓]   │
+│  [🎾 Tênis]    [🏀 Basquete]    │
+│  [🏖️ Beach T.] [🚴 Ciclismo]    │
+│  [🏎️ Kart]     [🏃 Corrida]     │
+│  [🍖 Churrasco] [+ Outros]      │
+│                                  │
+│  Selecionado: Futebol, Vôlei     │
+│                                  │
+│         [Continuar →]            │
+└──────────────────────────────────┘</div>
+
+    <h3>4.2 Home</h3>
+    <div class="wireframe">┌──────────────────────────────────┐
+│  PlayGroup    🔔(3)         👤   │
+├──────────────────────────────────┤
+│  Olá, Matheus! 👋                │
+│                                  │
+│  PRÓXIMOS EVENTOS                │
+│  ┌──────────────────────────┐    │
+│  │ ⚽ Futebol Quinta S.Luís │    │
+│  │ Quinta, 03/07 · 20h00   │    │
+│  │ ✅ Confirmado · 10/14   │    │
+│  │               [Ver →]   │    │
+│  └──────────────────────────┘    │
+│  ┌──────────────────────────┐    │
+│  │ 🏐 Vôlei Arena Calhau   │    │
+│  │ Sáb, 05/07 · 09h00      │    │
+│  │ 📣 Confirme sua presença │    │
+│  │ [Confirmar] [Recusar]   │    │
+│  └──────────────────────────┘    │
+│                                  │
+│  MEUS GRUPOS                     │
+│  [⚽ FQ] [🏐 VA] [🏖️ BT] [+]    │
+│                                  │
+│  ATIVIDADE RECENTE               │
+│  · Rafael confirmou presença     │
+│  · Carlos pagou mensalidade      │
+│  · 2 novos membros (Beach T.)    │
+│                                  │
+├──────────────────────────────────┤
+│ 🏠Home  👥Grupos  ➕  🏆Rank  👤 │
+└──────────────────────────────────┘</div>
+
+    <h3>4.3 Detalhes do Evento</h3>
+    <div class="wireframe">┌──────────────────────────────────┐
+│  ← Evento                   ···  │
+│                                  │
+│  ⚽ Futebol Quinta São Luís      │
+│  Quinta-feira, 03 de julho       │
+│  20h00 - 21h30                   │
+│                                  │
+│  📍 Campo São Luís FC            │
+│     Rua das Palmeiras, 100       │
+│  [Ver no mapa]                   │
+│  ─────────────────────────────   │
+│  SUA CONFIRMAÇÃO                 │
+│  ┌──────────────────────────┐    │
+│  │  ✅ Você está confirmado │    │
+│  │  [Cancelar participação] │    │
+│  └──────────────────────────┘    │
+│                                  │
+│  VAGAS: 10/14                    │
+│  ████████░░░░░░ 71%              │
+│                                  │
+│  ✅ CONFIRMADOS (10)             │
+│  👤Matheus⭐ 👤João⭐ 👤Carlos⭐  │
+│  👤Pedro⭐  👤Lucas⭐ 👤Rafael⭐  │
+│  👤Felipe⭐ 👤Gabriel⭐ 👤Bruno  │
+│  👤Diego    [Ver todos]          │
+│                                  │
+│  ⏳ FILA DE ESPERA (3)           │
+│  1. André (2h) 2. Thiago 3. Marc │
+│                                  │
+│  TIMES (sorteados)               │
+│  Time A: Matheus, Carlos...      │
+│  [Ver times completos]           │
+│                                  │
+│  PAGAMENTO                       │
+│  💰 R$ 15,00 · ✅ Pago           │
+└──────────────────────────────────┘</div>
+
+    <h3>4.4 Dashboard do Organizador</h3>
+    <div class="wireframe">┌──────────────────────────────────┐
+│  ← Dashboard            📤 ···  │
+│  Futebol Quinta São Luís         │
+├──────────────────────────────────┤
+│  PRÓXIMO EVENTO                  │
+│  Quinta, 03/07 · 20h00           │
+│  10/14 · ⏳ 4 vagas abertas      │
+│  [Gerenciar evento]              │
+│                                  │
+│  AÇÕES RÁPIDAS                   │
+│  [+ Criar evento]                │
+│  [📢 Notificar grupo]            │
+│  [🎲 Sortear times]              │
+│  [💰 Cobranças]                  │
+│                                  │
+│  MEMBROS                         │
+│  10 ativos · 1 inadimplente      │
+│                                  │
+│  FINANCEIRO RÁPIDO               │
+│  Julho: R$ 555 / R$ 615          │
+│  ❌ Lucas — R$ 60 (10 dias)      │
+│  [Enviar lembrete]               │
+│                                  │
+│  FILA DE ESPERA                  │
+│  3 pessoas aguardando            │
+│  [Gerenciar fila]                │
+│                                  │
+│  ESTATÍSTICAS DO GRUPO           │
+│  Presença média: 92%             │
+│  Eventos em julho: 4             │
+└──────────────────────────────────┘</div>
+
+    <h3>4.5 Fila de Espera — Visão do Participante</h3>
+    <div class="wireframe">┌──────────────────────────────────┐
+│  ← Fila de Espera                │
+│  Futebol Quinta · 03/07          │
+├──────────────────────────────────┤
+│  SUA POSIÇÃO NA FILA             │
+│  ┌──────────────────────────┐    │
+│  │  🕐  2ª posição          │    │
+│  │  Entraste às 18h30       │    │
+│  │  Aguardando vaga...      │    │
+│  │  [Sair da fila]          │    │
+│  └──────────────────────────┘    │
+│                                  │
+│  FILA COMPLETA (3 pessoas)       │
+│                                  │
+│  1  André  ← chamado agora       │
+│             ⏰ 28 min restantes   │
+│  2  Você   ← sua posição         │
+│  3  Marcelo                      │
+│                                  │
+│  ÚLTIMA ATUALIZAÇÃO              │
+│  · Rafael cancelou às 18h28      │
+│  · André foi notificado          │
+│                                  │
+│  Você será avisado assim que     │
+│  uma vaga ficar disponível. 🔔   │
+└──────────────────────────────────┘</div>
+
+    <h3>Telas adicionais planejadas</h3>
+    <div class="cards-grid">
+      <div class="card"><div class="card-title">Financeiro (membro)</div><div class="card-desc">Histórico de pagamentos e cobranças pendentes do próprio usuário.</div></div>
+      <div class="card"><div class="card-title">Financeiro (organizador)</div><div class="card-desc">Dashboard completo: receita, inadimplência, relatórios.</div></div>
+      <div class="card"><div class="card-title">Sorteio de Times</div><div class="card-desc">Interface de draft ao vivo, revelação animada dos times.</div></div>
+      <div class="card"><div class="card-title">Estatísticas</div><div class="card-desc">Gráficos de presença, artilharia e comparativo mês a mês.</div></div>
+      <div class="card"><div class="card-title">Convites</div><div class="card-desc">QR Code, link copiável, configuração de expiração e limite de usos.</div></div>
+      <div class="card"><div class="card-title">Ranking</div><div class="card-desc">Tabela por presença, gols, assistências e fairplay. Filtro por período.</div></div>
+    </div>
+  </section>
+
+  <!-- 5. DESIGN SYSTEM -->
+  <section class="section" id="design-system">
+    <h2>5. Design System</h2>
+
+    <h3>Paleta de Cores</h3>
+    <div class="color-grid">
+      <div class="color-swatch"><div class="swatch" style="background:#22c55e"></div><div class="swatch-info"><div class="swatch-name">Primary 500</div><div class="swatch-val">#22c55e</div></div></div>
+      <div class="color-swatch"><div class="swatch" style="background:#16a34a"></div><div class="swatch-info"><div class="swatch-name">Primary 600</div><div class="swatch-val">#16a34a</div></div></div>
+      <div class="color-swatch"><div class="swatch" style="background:#dcfce7"></div><div class="swatch-info"><div class="swatch-name">Primary 100</div><div class="swatch-val">#dcfce7</div></div></div>
+      <div class="color-swatch"><div class="swatch" style="background:#f97316"></div><div class="swatch-info"><div class="swatch-name">Accent 400</div><div class="swatch-val">#f97316</div></div></div>
+      <div class="color-swatch"><div class="swatch" style="background:#ef4444"></div><div class="swatch-info"><div class="swatch-name">Error</div><div class="swatch-val">#ef4444</div></div></div>
+      <div class="color-swatch"><div class="swatch" style="background:#f59e0b"></div><div class="swatch-info"><div class="swatch-name">Warning</div><div class="swatch-val">#f59e0b</div></div></div>
+      <div class="color-swatch"><div class="swatch" style="background:#3b82f6"></div><div class="swatch-info"><div class="swatch-name">Info</div><div class="swatch-val">#3b82f6</div></div></div>
+      <div class="color-swatch"><div class="swatch" style="background:#1e293b"></div><div class="swatch-info"><div class="swatch-name">BG Secondary</div><div class="swatch-val">#1e293b</div></div></div>
+    </div>
+
+    <h3>Tokens de Design</h3>
+    <div class="tokens-grid">
+      <div class="token-card">
+        <h4>Tipografia</h4>
+        <div class="token-row"><span class="token-name">text-xs</span><span class="token-val">12px</span></div>
+        <div class="token-row"><span class="token-name">text-sm</span><span class="token-val">14px</span></div>
+        <div class="token-row"><span class="token-name">text-base</span><span class="token-val">16px</span></div>
+        <div class="token-row"><span class="token-name">text-lg</span><span class="token-val">18px</span></div>
+        <div class="token-row"><span class="token-name">text-xl</span><span class="token-val">20px</span></div>
+        <div class="token-row"><span class="token-name">text-2xl</span><span class="token-val">24px</span></div>
+        <div class="token-row"><span class="token-name">text-4xl</span><span class="token-val">36px</span></div>
+        <div class="token-row"><span class="token-name">font-sans</span><span class="token-val">Inter</span></div>
+      </div>
+      <div class="token-card">
+        <h4>Espaçamentos</h4>
+        <div class="token-row"><span class="token-name">space-1</span><span class="token-val">4px</span></div>
+        <div class="token-row"><span class="token-name">space-2</span><span class="token-val">8px</span></div>
+        <div class="token-row"><span class="token-name">space-4</span><span class="token-val">16px</span></div>
+        <div class="token-row"><span class="token-name">space-6</span><span class="token-val">24px</span></div>
+        <div class="token-row"><span class="token-name">space-8</span><span class="token-val">32px</span></div>
+        <div class="token-row"><span class="token-name">screen-x</span><span class="token-val">16px</span></div>
+        <div class="token-row"><span class="token-name">bottom-nav</span><span class="token-val">64px</span></div>
+      </div>
+      <div class="token-card">
+        <h4>Bordas e Raios</h4>
+        <div class="token-row"><span class="token-name">radius-sm</span><span class="token-val">4px</span></div>
+        <div class="token-row"><span class="token-name">radius-md</span><span class="token-val">8px</span></div>
+        <div class="token-row"><span class="token-name">radius-lg</span><span class="token-val">12px</span></div>
+        <div class="token-row"><span class="token-name">radius-xl</span><span class="token-val">16px</span></div>
+        <div class="token-row"><span class="token-name">radius-2xl</span><span class="token-val">24px</span></div>
+        <div class="token-row"><span class="token-name">radius-full</span><span class="token-val">9999px</span></div>
+      </div>
+      <div class="token-card">
+        <h4>Sombras</h4>
+        <div class="token-row"><span class="token-name">shadow-sm</span><span class="token-val">0 1px 2px rgba(0,0,0,.05)</span></div>
+        <div class="token-row"><span class="token-name">shadow-card</span><span class="token-val">0 2px 8px rgba(0,0,0,.08)</span></div>
+        <div class="token-row"><span class="token-name">shadow-lg</span><span class="token-val">0 10px 15px rgba(0,0,0,.1)</span></div>
+        <div class="token-row"><span class="token-name">shadow-sheet</span><span class="token-val">0 -4px 24px rgba(0,0,0,.15)</span></div>
+      </div>
+    </div>
+
+    <h3>Componentes Principais</h3>
+    <pre>// Button — variantes
+&lt;Button variant="primary"&gt;Confirmar Presença&lt;/Button&gt;
+&lt;Button variant="secondary"&gt;Cancelar&lt;/Button&gt;
+&lt;Button variant="ghost"&gt;Ver detalhes&lt;/Button&gt;
+&lt;Button variant="danger"&gt;Excluir grupo&lt;/Button&gt;
+&lt;Button loading&gt;Carregando...&lt;/Button&gt;
+
+// Badge — status
+&lt;Badge variant="success"&gt;Confirmado&lt;/Badge&gt;
+&lt;Badge variant="warning"&gt;Pendente&lt;/Badge&gt;
+&lt;Badge variant="error"&gt;Cancelado&lt;/Badge&gt;
+&lt;Badge variant="info"&gt;Mensalista&lt;/Badge&gt;
+
+// Bottom Navigation
+&lt;BottomNav&gt;
+  &lt;NavItem icon={HomeIcon}   label="Home"    href="/"        /&gt;
+  &lt;NavItem icon={GroupsIcon} label="Grupos"  href="/groups"  /&gt;
+  &lt;NavItem icon={PlusCircle} label=""        href="/create"  isAction /&gt;
+  &lt;NavItem icon={TrophyIcon} label="Ranking" href="/ranking" /&gt;
+  &lt;NavItem icon={PersonIcon} label="Perfil"  href="/profile" /&gt;
+&lt;/BottomNav&gt;</pre>
+  </section>
+
+  <!-- 6. ARQUITETURA -->
+  <section class="section" id="arquitetura">
+    <h2>6. Arquitetura Next.js 15</h2>
+
+    <h3>Estrutura de Pastas</h3>
+    <pre>playgroup/
+├── app/
+│   ├── (auth)/                   # Login, register, onboarding
+│   ├── (app)/                    # Layout + bottom nav
+│   │   ├── page.tsx              # Home
+│   │   ├── groups/
+│   │   │   ├── page.tsx
+│   │   │   ├── create/
+│   │   │   └── [groupId]/
+│   │   │       ├── page.tsx
+│   │   │       ├── events/[eventId]/
+│   │   │       │   ├── page.tsx
+│   │   │       │   ├── participants/
+│   │   │       │   └── teams/
+│   │   │       ├── members/
+│   │   │       ├── financial/
+│   │   │       ├── ranking/
+│   │   │       ├── statistics/
+│   │   │       ├── invite/
+│   │   │       └── dashboard/    # Organizador
+│   │   ├── ranking/
+│   │   └── profile/
+│   ├── join/[inviteCode]/        # Landing de convite
+│   └── api/
+│       ├── auth/callback/        # OAuth callback
+│       └── webhooks/payment/     # PIX webhook (V2)
+│
+├── components/
+│   ├── ui/                       # Design System primitivos
+│   │   ├── Button/
+│   │   ├── Input/
+│   │   ├── Badge/
+│   │   ├── Avatar/
+│   │   ├── Card/
+│   │   ├── Modal/
+│   │   ├── BottomSheet/
+│   │   └── Toast/
+│   ├── layout/
+│   │   ├── BottomNav.tsx
+│   │   └── Header.tsx
+│   └── shared/
+│       ├── EventCard.tsx
+│       └── GroupCard.tsx
+│
+├── features/                     # Feature modules (co-location)
+│   ├── auth/
+│   ├── groups/
+│   ├── events/
+│   ├── waitlist/
+│   ├── financial/
+│   ├── teams/
+│   ├── ranking/
+│   └── notifications/
+│
+├── hooks/                        # Hooks globais
+│   ├── useSupabase.ts
+│   ├── useUser.ts
+│   └── useRealtime.ts
+│
+├── services/                     # Camada Supabase
+│   ├── supabase/client.ts
+│   ├── supabase/server.ts
+│   └── [entity].service.ts
+│
+├── lib/
+│   ├── utils.ts                  # cn(), formatDate()
+│   ├── constants.ts
+│   ├── validations.ts            # Zod schemas
+│   └── team-balancer.ts          # Algoritmo de times
+│
+├── types/
+│   ├── supabase.ts               # Gerado pelo CLI
+│   └── app.types.ts
+│
+├── store/                        # Zustand
+│   ├── auth.store.ts
+│   └── ui.store.ts
+│
+└── supabase/
+    ├── migrations/
+    ├── functions/
+    │   ├── process-waitlist/
+    │   ├── send-notifications/
+    │   ├── generate-recurring-events/
+    │   └── process-payments/
+    └── seed.sql</pre>
+
+    <h3>Padrões de Código</h3>
+    <pre>// Server Action (preferência sobre API Routes para mutações)
+'use server'
+
+export async function confirmParticipation(input: { eventId: string; userId: string }) {
+  const supabase = await createServerClient()
+  const parsed = confirmParticipationSchema.parse(input)
+
+  const { data: event } = await supabase
+    .from('events')
+    .select('max_participants, participant_count')
+    .eq('id', parsed.eventId)
+    .single()
+
+  if (event.participant_count >= event.max_participants) {
+    return { error: 'NO_SLOTS_AVAILABLE' }
+  }
+
+  await supabase.from('event_participants').upsert({
+    event_id: parsed.eventId,
+    user_id: parsed.userId,
+    status: 'confirmed',
+    confirmed_at: new Date().toISOString(),
+  })
+
+  revalidatePath(`/groups/[groupId]/events/${parsed.eventId}`)
+  return { success: true }
+}</pre>
+
+    <pre>// Realtime hook — lista de presença ao vivo
+export function useEventRealtime(eventId: string) {
+  const supabase = useSupabaseClient()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`event:${eventId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public',
+        table: 'event_participants',
+        filter: `event_id=eq.${eventId}`,
+      }, (payload) => handleParticipantChange(payload))
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [eventId])
+}</pre>
+  </section>
+
+  <!-- 7. BANCO DE DADOS -->
+  <section class="section" id="banco">
+    <h2>7. Modelagem do Banco de Dados</h2>
+
+    <div class="db-table">
+      <div class="db-table-header"><span class="table-name">users</span><span style="color:var(--text2);font-size:12px">— extende auth.users do Supabase</span></div>
+      <div class="db-table-body">
+        <div class="db-field"><span class="field-name">id</span><span class="field-type">UUID PK</span><span class="field-desc">Referencia auth.users(id)</span></div>
+        <div class="db-field"><span class="field-name">name</span><span class="field-type">TEXT</span><span class="field-desc">Nome completo. Ex: "Matheus Wirino"</span></div>
+        <div class="db-field"><span class="field-name">nickname</span><span class="field-type">TEXT</span><span class="field-desc">Apelido exibido nos grupos. Ex: "Matheus"</span></div>
+        <div class="db-field"><span class="field-name">avatar_url</span><span class="field-type">TEXT</span><span class="field-desc">URL no Supabase Storage</span></div>
+        <div class="db-field"><span class="field-name">city</span><span class="field-type">TEXT</span><span class="field-desc">Ex: "São Luís, MA"</span></div>
+        <div class="db-field"><span class="field-name">sports</span><span class="field-type">TEXT[]</span><span class="field-desc">['football', 'volleyball']</span></div>
+        <div class="db-field"><span class="field-name">skill_level</span><span class="field-type">TEXT</span><span class="field-desc">beginner | intermediate | advanced | professional</span></div>
+        <div class="db-field"><span class="field-name">push_token</span><span class="field-type">TEXT</span><span class="field-desc">FCM token para push notifications</span></div>
+        <div class="db-field"><span class="field-name">settings</span><span class="field-type">JSONB</span><span class="field-desc">Preferências de notificação e privacidade</span></div>
+      </div>
+    </div>
+
+    <div class="db-table">
+      <div class="db-table-header"><span class="table-name">groups</span></div>
+      <div class="db-table-body">
+        <div class="db-field"><span class="field-name">id</span><span class="field-type">UUID PK</span><span class="field-desc">gen_random_uuid()</span></div>
+        <div class="db-field"><span class="field-name">name</span><span class="field-type">TEXT</span><span class="field-desc">"Futebol Quinta São Luís"</span></div>
+        <div class="db-field"><span class="field-name">slug</span><span class="field-type">TEXT UNIQUE</span><span class="field-desc">"futebol-quinta-sao-luis"</span></div>
+        <div class="db-field"><span class="field-name">sport</span><span class="field-type">TEXT</span><span class="field-desc">'football', 'volleyball', 'beach_tennis'...</span></div>
+        <div class="db-field"><span class="field-name">admin_id</span><span class="field-name">UUID FK</span><span class="field-desc">→ users.id</span></div>
+        <div class="db-field"><span class="field-name">access_type</span><span class="field-type">TEXT</span><span class="field-desc">public | private | invite</span></div>
+        <div class="db-field"><span class="field-name">monthly_fee</span><span class="field-type">DECIMAL</span><span class="field-desc">Ex: 60.00</span></div>
+        <div class="db-field"><span class="field-name">per_event_fee</span><span class="field-type">DECIMAL</span><span class="field-desc">Ex: 15.00</span></div>
+        <div class="db-field"><span class="field-name">pix_key</span><span class="field-type">TEXT</span><span class="field-desc">Chave PIX do organizador</span></div>
+        <div class="db-field"><span class="field-name">plan</span><span class="field-type">TEXT</span><span class="field-desc">free | starter | pro | business</span></div>
+        <div class="db-field"><span class="field-name">deleted_at</span><span class="field-type">TIMESTAMPTZ</span><span class="field-desc">Soft delete — mantém dados 30 dias</span></div>
+      </div>
+    </div>
+
+    <div class="db-table">
+      <div class="db-table-header"><span class="table-name">events</span></div>
+      <div class="db-table-body">
+        <div class="db-field"><span class="field-name">id</span><span class="field-type">UUID PK</span></div>
+        <div class="db-field"><span class="field-name">group_id</span><span class="field-type">UUID FK</span><span class="field-desc">→ groups.id ON DELETE CASCADE</span></div>
+        <div class="db-field"><span class="field-name">starts_at</span><span class="field-type">TIMESTAMPTZ</span><span class="field-desc">Data/hora de início</span></div>
+        <div class="db-field"><span class="field-name">ends_at</span><span class="field-type">TIMESTAMPTZ</span><span class="field-desc">Data/hora de término</span></div>
+        <div class="db-field"><span class="field-name">max_participants</span><span class="field-type">INTEGER</span><span class="field-desc">Ex: 14</span></div>
+        <div class="db-field"><span class="field-name">monthly_slots</span><span class="field-type">INTEGER</span><span class="field-desc">Vagas reservadas para mensalistas</span></div>
+        <div class="db-field"><span class="field-name">participant_count</span><span class="field-type">INTEGER</span><span class="field-desc">Cache — atualizado por trigger</span></div>
+        <div class="db-field"><span class="field-name">status</span><span class="field-type">TEXT</span><span class="field-desc">draft | published | open | completed | cancelled</span></div>
+        <div class="db-field"><span class="field-name">is_recurring</span><span class="field-type">BOOLEAN</span><span class="field-desc">Evento recorrente</span></div>
+        <div class="db-field"><span class="field-name">recurrence_rule</span><span class="field-type">TEXT</span><span class="field-desc">RRULE: "FREQ=WEEKLY;BYDAY=TH"</span></div>
+        <div class="db-field"><span class="field-name">monthly_confirm_deadline</span><span class="field-type">TIMESTAMPTZ</span><span class="field-desc">Prazo de confirmação dos mensalistas</span></div>
+      </div>
+    </div>
+
+    <div class="db-table">
+      <div class="db-table-header"><span class="table-name">event_participants</span></div>
+      <div class="db-table-body">
+        <div class="db-field"><span class="field-name">event_id</span><span class="field-type">UUID FK</span><span class="field-desc">→ events.id</span></div>
+        <div class="db-field"><span class="field-name">user_id</span><span class="field-type">UUID FK</span><span class="field-desc">→ users.id | UNIQUE(event_id, user_id)</span></div>
+        <div class="db-field"><span class="field-name">status</span><span class="field-type">TEXT</span><span class="field-desc">confirmed | pending | declined | absent | present</span></div>
+        <div class="db-field"><span class="field-name">is_monthly</span><span class="field-type">BOOLEAN</span><span class="field-desc">Era mensalista neste evento</span></div>
+        <div class="db-field"><span class="field-name">goals</span><span class="field-type">INTEGER</span><span class="field-desc">Gols (pós-evento)</span></div>
+        <div class="db-field"><span class="field-name">assists</span><span class="field-type">INTEGER</span><span class="field-desc">Assistências (pós-evento)</span></div>
+        <div class="db-field"><span class="field-name">is_late_cancel</span><span class="field-type">BOOLEAN</span><span class="field-desc">Cancelou dentro do prazo de penalidade</span></div>
+        <div class="db-field"><span class="field-name">payment_id</span><span class="field-type">UUID FK</span><span class="field-desc">→ payments.id</span></div>
+      </div>
+    </div>
+
+    <div class="db-table">
+      <div class="db-table-header"><span class="table-name">waitlists</span></div>
+      <div class="db-table-body">
+        <div class="db-field"><span class="field-name">event_id</span><span class="field-type">UUID FK</span></div>
+        <div class="db-field"><span class="field-name">user_id</span><span class="field-type">UUID FK</span><span class="field-desc">UNIQUE(event_id, user_id)</span></div>
+        <div class="db-field"><span class="field-name">position</span><span class="field-type">INTEGER</span><span class="field-desc">Posição na fila (1, 2, 3...)</span></div>
+        <div class="db-field"><span class="field-name">status</span><span class="field-type">TEXT</span><span class="field-desc">waiting | notified | confirmed | expired | left</span></div>
+        <div class="db-field"><span class="field-name">expires_at</span><span class="field-type">TIMESTAMPTZ</span><span class="field-desc">+30min após ser notificado</span></div>
+        <div class="db-field"><span class="field-name">is_monthly</span><span class="field-type">BOOLEAN</span><span class="field-desc">Mensalistas têm prioridade</span></div>
+      </div>
+    </div>
+
+    <div class="db-table">
+      <div class="db-table-header"><span class="table-name">payments</span></div>
+      <div class="db-table-body">
+        <div class="db-field"><span class="field-name">type</span><span class="field-type">TEXT</span><span class="field-desc">monthly | per_event | partial | fine</span></div>
+        <div class="db-field"><span class="field-name">amount</span><span class="field-type">DECIMAL</span><span class="field-desc">Ex: 60.00</span></div>
+        <div class="db-field"><span class="field-name">status</span><span class="field-type">TEXT</span><span class="field-desc">pending | paid | overdue | cancelled | refunded</span></div>
+        <div class="db-field"><span class="field-name">due_date</span><span class="field-type">DATE</span><span class="field-desc">Data de vencimento</span></div>
+        <div class="db-field"><span class="field-name">reference_month</span><span class="field-type">DATE</span><span class="field-desc">2025-07-01 para mensalidade de julho</span></div>
+        <div class="db-field"><span class="field-name">pix_key</span><span class="field-type">TEXT</span><span class="field-desc">Chave usada na transação</span></div>
+        <div class="db-field"><span class="field-name">paid_by</span><span class="field-type">UUID FK</span><span class="field-desc">Organizador que confirmou o pagamento</span></div>
+      </div>
+    </div>
+
+    <h3>Triggers Principais</h3>
+    <pre>-- Atualiza participant_count automaticamente
+CREATE TRIGGER trg_update_participant_count
+  AFTER INSERT OR UPDATE OR DELETE ON event_participants
+  FOR EACH ROW EXECUTE FUNCTION update_event_participant_count();
+
+-- Aciona fila quando participante cancela
+CREATE TRIGGER trg_notify_waitlist
+  AFTER UPDATE ON event_participants
+  FOR EACH ROW EXECUTE FUNCTION notify_waitlist_on_cancel();
+-- → pg_notify → Edge Function → push notification → timer 30min
+
+-- Reordena posições da fila quando alguém sai
+CREATE TRIGGER trg_reorder_waitlist
+  AFTER UPDATE ON waitlists
+  FOR EACH ROW EXECUTE FUNCTION reorder_waitlist();</pre>
+
+    <h3>Cron Jobs (pg_cron)</h3>
+    <pre>-- Gerar eventos recorrentes (todo dia à meia-noite)
+'0 0 * * *' → Edge Function: generate-recurring-events
+
+-- Verificar prazos de mensalistas (a cada hora)
+'0 * * * *' → Edge Function: check-monthly-deadlines
+
+-- Expirar fila de espera sem resposta (a cada 5 min)
+'*/5 * * * *' → UPDATE waitlists SET status='expired' WHERE expires_at &lt; now()
+
+-- Gerar cobranças mensais (dia 1, 8h)
+'0 8 1 * *' → Edge Function: generate-monthly-charges
+
+-- Marcar inadimplentes (todo dia 9h)
+'0 9 * * *' → UPDATE payments SET status='overdue' WHERE due_date &lt; CURRENT_DATE</pre>
+  </section>
+
+  <!-- 8. ROADMAP -->
+  <section class="section" id="roadmap">
+    <h2>8. Roadmap de Desenvolvimento</h2>
+
+    <div class="roadmap-phase">
+      <div class="roadmap-header mvp">
+        <h3>MVP — 0 a 3 meses</h3>
+        <span class="badge badge-green">~35 dias de dev</span>
+      </div>
+      <div class="roadmap-body">
+        <div class="roadmap-item"><span class="p0">P0</span> Autenticação Google + Email <span class="effort">3d</span></div>
+        <div class="roadmap-item"><span class="p0">P0</span> Onboarding 4 steps <span class="effort">2d</span></div>
+        <div class="roadmap-item"><span class="p0">P0</span> Criar grupo <span class="effort">3d</span></div>
+        <div class="roadmap-item"><span class="p0">P0</span> Entrar por link de convite <span class="effort">2d</span></div>
+        <div class="roadmap-item"><span class="p0">P0</span> Criar evento único <span class="effort">3d</span></div>
+        <div class="roadmap-item"><span class="p0">P0</span> Lista de presença (confirmar/recusar) <span class="effort">3d</span></div>
+        <div class="roadmap-item"><span class="p0">P0</span> Fila de espera básica <span class="effort">4d</span></div>
+        <div class="roadmap-item"><span class="p0">P0</span> Notificação push (Firebase) <span class="effort">3d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> Perfil de usuário <span class="effort">2d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> Mensalistas (manual) <span class="effort">3d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> Financeiro básico (registro manual) <span class="effort">4d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> Sorteio aleatório de times <span class="effort">2d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> PWA instalável <span class="effort">1d</span></div>
+      </div>
+    </div>
+
+    <div class="roadmap-phase">
+      <div class="roadmap-header v1">
+        <h3>V1 — 3 a 6 meses</h3>
+        <span class="badge badge-blue">~53 dias de dev</span>
+      </div>
+      <div class="roadmap-body">
+        <div class="roadmap-item"><span class="p0">P0</span> Evento recorrente semanal/mensal <span class="effort">5d</span></div>
+        <div class="roadmap-item"><span class="p0">P0</span> Mensalistas com automação completa <span class="effort">5d</span></div>
+        <div class="roadmap-item"><span class="p0">P0</span> Cobrança automática mensal <span class="effort">4d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> QR Code de convite <span class="effort">1d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> Sorteio balanceado por nível <span class="effort">4d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> Sorteio por capitães (draft) <span class="effort">3d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> Ranking de presenças <span class="effort">3d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> Estatísticas do grupo <span class="effort">4d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> Dashboard do organizador <span class="effort">5d</span></div>
+        <div class="roadmap-item"><span class="p1">P1</span> Relatório financeiro básico <span class="effort">3d</span></div>
+        <div class="roadmap-item"><span class="p2">P2</span> Notificação WhatsApp (Z-API) <span class="effort">5d</span></div>
+        <div class="roadmap-item"><span class="p2">P2</span> Registro de gols e assistências <span class="effort">2d</span></div>
+        <div class="roadmap-item"><span class="p2">P2</span> Apple Sign In <span class="effort">2d</span></div>
+        <div class="roadmap-item"><span class="p2">P2</span> Dark mode <span class="effort">2d</span></div>
+        <div class="roadmap-item"><span class="p2">P2</span> Export CSV financeiro <span class="effort">2d</span></div>
+      </div>
+    </div>
+
+    <div class="roadmap-phase">
+      <div class="roadmap-header v2">
+        <h3>V2 — 6 a 12 meses</h3>
+        <span class="badge badge-orange">Monetização e integrações</span>
+      </div>
+      <div class="roadmap-body">
+        <div class="roadmap-item"><span class="p0">P0</span> PIX automático (Pagar.me / OpenPix)</div>
+        <div class="roadmap-item"><span class="p0">P0</span> Planos pagos + billing (Stripe)</div>
+        <div class="roadmap-item"><span class="p0">P0</span> Multi-tenant admin panel</div>
+        <div class="roadmap-item"><span class="p1">P1</span> App nativo iOS/Android (Expo)</div>
+        <div class="roadmap-item"><span class="p1">P1</span> White-label (plano Business)</div>
+        <div class="roadmap-item"><span class="p2">P2</span> Votação MVP pós-jogo</div>
+        <div class="roadmap-item"><span class="p2">P2</span> Ranking global por cidade</div>
+        <div class="roadmap-item"><span class="p2">P2</span> Chat básico do grupo</div>
+        <div class="roadmap-item"><span class="p2">P2</span> Integração Google Calendar</div>
+        <div class="roadmap-item"><span class="p2">P2</span> API pública</div>
+      </div>
+    </div>
+
+    <div class="roadmap-phase">
+      <div class="roadmap-header v3">
+        <h3>V3 — 12 a 24 meses</h3>
+        <span class="badge badge-gray">Plataforma de esportes</span>
+      </div>
+      <div class="roadmap-body">
+        <div class="roadmap-item">Busca de adversários / partidas abertas</div>
+        <div class="roadmap-item">Torneios e campeonatos internos</div>
+        <div class="roadmap-item">Ranking nacional por esporte</div>
+        <div class="roadmap-item">Integração wearables (frequência cardíaca, GPS)</div>
+        <div class="roadmap-item">Marketplace de equipamentos entre membros</div>
+        <div class="roadmap-item">Clube de benefícios (parceiros)</div>
+        <div class="roadmap-item">IA para balanceamento preditivo de times</div>
+        <div class="roadmap-item">Transmissão ao vivo (Realtime + Stories)</div>
+      </div>
+    </div>
+
+    <h3>Critérios de Qualidade</h3>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-title">Performance</div>
+        <div class="card-desc">Lighthouse PWA ≥ 90. LCP &lt; 2.5s em 3G. Bundle JS &lt; 200kb (inicial).</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Segurança</div>
+        <div class="card-desc">RLS testado em 100% das tabelas. Zero exposição de dados entre grupos.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Confiabilidade</div>
+        <div class="card-desc">Push notification taxa ≥ 95%. Erro rate &lt; 0.1% em produção.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">UX</div>
+        <div class="card-desc">Criar evento em &lt; 90s. Confirmar presença em 1 toque. WCAG AA.</div>
+      </div>
+    </div>
+  </section>
+
+  <div style="text-align:center;padding:48px 0;color:var(--text2);font-size:13px;border-top:1px solid var(--border);">
+    PlayGroup — Documento de Produto v1.0 · Gerado em junho de 2026
+  </div>
+
+</main>
+
+<script>
+  // Highlight active nav item on scroll
+  const sections = document.querySelectorAll('section[id], div[id]');
+  const navLinks = document.querySelectorAll('.sidebar nav a');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(link => {
+          link.classList.remove('active');
+          if (link.getAttribute('href') === '#' + entry.target.id) {
+            link.classList.add('active');
+          }
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

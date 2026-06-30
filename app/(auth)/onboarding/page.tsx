@@ -1,39 +1,55 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useTransition, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { ChevronLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { useAuthStore } from '@/store/auth.store'
+import { Avatar } from '@/components/ui/Avatar'
 import { SPORTS } from '@/lib/constants'
-import type { SportId } from '@/lib/constants'
+import { saveProfile } from '@/lib/actions/profile'
+import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
+import type { SportId } from '@/lib/constants'
 
 const TOTAL_STEPS = 4
 
 const variants = {
-  enter: { opacity: 0, x: 40 },
-  center: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -40 },
+  enter:  { opacity: 0, x:  40 },
+  center: { opacity: 1, x:   0 },
+  exit:   { opacity: 0, x: -40 },
 }
 
 export default function OnboardingPage() {
-  const router = useRouter()
-  const { completeOnboarding } = useAuthStore()
+  const [isPending, startTransition] = useTransition()
 
-  const [step, setStep] = useState(1)
-  const [name, setName] = useState('')
-  const [nickname, setNickname] = useState('')
-  const [city, setCity] = useState('')
-  const [sports, setSports] = useState<SportId[]>([])
-  const [loading, setLoading] = useState(false)
+  const [step, setStep]           = useState(1)
+  const [name, setName]           = useState('')
+  const [nickname, setNickname]   = useState('')
+  const [city, setCity]           = useState('')
+  const [sports, setSports]       = useState<SportId[]>([])
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined)
+
+  // Pré-preenche nome/apelido e avatar vindos do Google OAuth
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      const meta = user.user_metadata
+      const fullName: string = meta?.full_name ?? meta?.name ?? ''
+      const firstName = fullName.split(' ')[0] ?? ''
+      if (fullName && !name) setName(fullName)
+      if (firstName && !nickname) setNickname(firstName)
+      if (meta?.avatar_url) setAvatarUrl(meta.avatar_url)
+      else if (meta?.picture) setAvatarUrl(meta.picture)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function toggleSport(id: SportId) {
     setSports((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
     )
   }
 
@@ -44,21 +60,29 @@ export default function OnboardingPage() {
     return true
   }
 
-  async function handleNext() {
+  function handleNext() {
     if (step < TOTAL_STEPS) {
       setStep(step + 1)
       return
     }
-    setLoading(true)
-    await new Promise((r) => setTimeout(r, 800))
-    completeOnboarding({ name, nickname, city, sports })
-    toast.success('Bem-vindo ao PlayGroup!')
-    router.push('/')
+    submit('/')
+  }
+
+  function submit(next: string) {
+    startTransition(async () => {
+      const result = await saveProfile({ name, nickname, city, sports })
+      if (result?.error) {
+        toast.error(result.error)
+        return
+      }
+      toast.success('Bem-vindo ao PlayGroup!')
+      // redirect() no server action leva para next automaticamente
+    })
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 max-w-lg mx-auto">
-      {/* Progress bar */}
+      {/* Barra de progresso */}
       <div className="h-1 bg-slate-800">
         <motion.div
           className="h-full bg-primary-500 rounded-full"
@@ -67,7 +91,7 @@ export default function OnboardingPage() {
         />
       </div>
 
-      {/* Header */}
+      {/* Topo */}
       <div className="flex items-center justify-between px-5 pt-4 pb-2">
         {step > 1 ? (
           <button
@@ -83,7 +107,7 @@ export default function OnboardingPage() {
         <div className="size-9" />
       </div>
 
-      {/* Step content */}
+      {/* Conteúdo do step */}
       <div className="flex-1 px-5 pt-8 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
@@ -96,6 +120,12 @@ export default function OnboardingPage() {
           >
             {step === 1 && (
               <div className="space-y-6">
+                {avatarUrl && (
+                  <div className="flex flex-col items-center gap-2">
+                    <Avatar name={name} src={avatarUrl} size="xl" />
+                    <p className="text-xs text-slate-500">Foto importada do Google</p>
+                  </div>
+                )}
                 <div>
                   <h2 className="text-2xl font-bold text-slate-100 mb-1">Como podemos te chamar?</h2>
                   <p className="text-sm text-slate-400">Seu nome é exibido para outros membros do grupo.</p>
@@ -135,11 +165,10 @@ export default function OnboardingPage() {
                   onChange={(e) => setCity(e.target.value)}
                   autoFocus
                 />
-
                 <div className="space-y-2">
                   <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Cidades populares</p>
                   <div className="flex flex-wrap gap-2">
-                    {['São Luís, MA', 'Fortaleza, CE', 'Belém, PA', 'Manaus, AM', 'Teresina, PI'].map((c) => (
+                    {['São Luís, MA','Fortaleza, CE','Belém, PA','Manaus, AM','Teresina, PI'].map((c) => (
                       <button
                         key={c}
                         onClick={() => setCity(c)}
@@ -208,28 +237,27 @@ export default function OnboardingPage() {
                   <div>
                     <h2 className="text-2xl font-bold text-slate-100">Tudo pronto, {nickname}!</h2>
                     <p className="text-sm text-slate-400 mt-2">
-                      Você pratica {sports.map((s) => SPORTS.find((x) => x.id === s)?.label).join(', ')} em {city}.
+                      Você pratica{' '}
+                      {sports.map((s) => SPORTS.find((x) => x.id === s)?.label).join(', ')}{' '}
+                      em {city}.
                     </p>
                   </div>
                 </motion.div>
 
                 <div className="space-y-3 text-left">
-                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wider text-center">O que você quer fazer primeiro?</p>
+                  <p className="text-xs text-slate-500 font-medium uppercase tracking-wider text-center">
+                    O que você quer fazer primeiro?
+                  </p>
                   {[
-                    { emoji: '🏆', text: 'Criar meu primeiro grupo', href: '/groups/create' },
-                    { emoji: '🔗', text: 'Entrar com link de convite', href: '/join' },
-                    { emoji: '👀', text: 'Explorar o app', href: '/' },
-                  ].map(({ emoji, text, href }) => (
+                    { emoji: '🏆', text: 'Criar meu primeiro grupo', href: '/create/group' },
+                    { emoji: '🔗', text: 'Entrar com link de convite', href: '/create' },
+                    { emoji: '👀', text: 'Explorar o app',            href: '/home'   },
+                  ].map(({ emoji, text }) => (
                     <button
-                      key={href}
-                      onClick={async () => {
-                        setLoading(true)
-                        await new Promise((r) => setTimeout(r, 600))
-                        completeOnboarding({ name, nickname, city, sports })
-                        toast.success('Bem-vindo ao PlayGroup!')
-                        router.push(href)
-                      }}
-                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-800 bg-slate-900 hover:border-slate-700 hover:bg-slate-800 transition-all text-left cursor-pointer active:scale-[0.98]"
+                      key={text}
+                      onClick={() => submit('/home')}
+                      disabled={isPending}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-800 bg-slate-900 hover:border-slate-700 hover:bg-slate-800 transition-all text-left cursor-pointer active:scale-[0.98] disabled:opacity-50"
                     >
                       <span className="text-2xl">{emoji}</span>
                       <span className="text-sm font-medium text-slate-200">{text}</span>
@@ -242,15 +270,15 @@ export default function OnboardingPage() {
         </AnimatePresence>
       </div>
 
-      {/* Footer button (steps 1-3 only) */}
+      {/* Botão de avançar (steps 1–3) */}
       {step < 4 && (
         <div className="px-5 pb-10 pt-6">
           <Button
             fullWidth
             size="lg"
             onClick={handleNext}
-            loading={loading}
-            disabled={!canAdvance()}
+            loading={isPending}
+            disabled={!canAdvance() || isPending}
           >
             {step === TOTAL_STEPS - 1 ? 'Finalizar' : 'Continuar'}
           </Button>

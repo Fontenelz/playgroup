@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/Avatar'
 import { SelectCardGroup } from '@/components/ui/SelectCard'
 import { useAuthStore } from '@/store/auth.store'
-import { MOCK_ME } from '@/data/mock'
 import { SPORTS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { SportId } from '@/lib/constants'
@@ -26,18 +25,49 @@ const SKILL_OPTIONS: { id: SkillLevel; label: string; description: string }[] = 
 export default function EditProfilePage() {
   const router       = useRouter()
   const storeUser    = useAuthStore((s) => s.user)
+  const isLoading    = useAuthStore((s) => s.isLoading)
   const updateUser   = useAuthStore((s) => s.updateUser)
-  const user         = storeUser ?? MOCK_ME
 
-  const [name,       setName]       = useState(user.name)
-  const [nickname,   setNickname]   = useState(user.nickname ?? '')
-  const [bio,        setBio]        = useState(user.bio ?? '')
-  const [city,       setCity]       = useState(user.city ?? '')
-  const [sports,     setSports]     = useState<SportId[]>(user.sports as SportId[])
-  const [skillLevel, setSkillLevel] = useState<SkillLevel>(user.skill_level)
-  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(user.avatar_url)
-  const [loading, setLoading] = useState(false)
+  // Form state - initialized from store when available
+  const [name,          setName]          = useState('')
+  const [nickname,      setNickname]      = useState('')
+  const [bio,           setBio]           = useState('')
+  const [city,          setCity]          = useState('')
+  const [sports,        setSports]        = useState<SportId[]>([])
+  const [skillLevel,    setSkillLevel]    = useState<SkillLevel>('intermediate')
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined)
+  const [initialized,   setInitialized]   = useState(false)
+  const [loading,       setLoading]       = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Redirect if not authenticated after loading
+  useEffect(() => {
+    if (!isLoading && !storeUser) {
+      router.push('/login')
+    }
+  }, [isLoading, storeUser, router])
+
+  // Initialize form when user data is available
+  useEffect(() => {
+    if (storeUser && !initialized) {
+      setName(storeUser.name)
+      setNickname(storeUser.nickname ?? '')
+      setBio(storeUser.bio ?? '')
+      setCity(storeUser.city ?? '')
+      setSports((storeUser.sports ?? []) as SportId[])
+      setSkillLevel(storeUser.skill_level ?? 'intermediate')
+      setAvatarPreview(storeUser.avatar_url ?? undefined)
+      setInitialized(true)
+    }
+  }, [storeUser, initialized])
+
+  if (isLoading || !storeUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="size-8 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
+      </div>
+    )
+  }
 
   function toggleSport(id: SportId) {
     setSports((prev) =>
@@ -54,13 +84,13 @@ export default function EditProfilePage() {
   }
 
   const isDirty =
-    name !== user.name ||
-    nickname !== (user.nickname ?? '') ||
-    bio !== (user.bio ?? '') ||
-    city !== (user.city ?? '') ||
-    JSON.stringify(sports) !== JSON.stringify(user.sports) ||
-    skillLevel !== user.skill_level ||
-    avatarPreview !== user.avatar_url
+    name !== storeUser.name ||
+    nickname !== (storeUser.nickname ?? '') ||
+    bio !== (storeUser.bio ?? '') ||
+    city !== (storeUser.city ?? '') ||
+    JSON.stringify(sports) !== JSON.stringify(storeUser.sports) ||
+    skillLevel !== storeUser.skill_level ||
+    avatarPreview !== (storeUser.avatar_url ?? undefined)
 
   async function handleSave() {
     if (!name.trim()) { toast.error('Nome é obrigatório'); return }
@@ -115,7 +145,7 @@ export default function EditProfilePage() {
           className="flex flex-col items-center gap-3"
         >
           <div className="relative">
-            <Avatar name={name || user.name} src={avatarPreview} size="xl" />
+            <Avatar name={name || storeUser.name} src={avatarPreview} size="xl" />
             <button
               onClick={() => fileRef.current?.click()}
               className="absolute -bottom-1 -right-1 size-9 rounded-full bg-primary-500 hover:bg-primary-400 border-2 border-slate-950 flex items-center justify-center cursor-pointer transition-colors shadow-lg"
