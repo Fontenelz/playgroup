@@ -272,6 +272,15 @@ ALTER TABLE public.waitlists         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications     ENABLE ROW LEVEL SECURITY;
 
+-- Privilégios de base (RLS filtra as linhas; sem GRANT, a query falha com
+-- "permission denied" antes mesmo de avaliar as policies).
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated, anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO anon;
+
 -- users
 CREATE POLICY "Perfis visíveis para autenticados"
   ON users FOR SELECT TO authenticated USING (true);
@@ -288,6 +297,12 @@ CREATE POLICY "Membros veem o grupo"
       access_type = 'public'
       OR admin_id = auth.uid()
       OR public.is_group_member(id, auth.uid())
+      OR EXISTS (
+        SELECT 1 FROM invite_codes
+        WHERE invite_codes.group_id = groups.id
+          AND (invite_codes.expires_at IS NULL OR invite_codes.expires_at > now())
+          AND (invite_codes.max_uses IS NULL OR invite_codes.uses < invite_codes.max_uses)
+      )
     )
   );
 CREATE POLICY "Autenticados criam grupos"
@@ -317,9 +332,9 @@ CREATE POLICY "Usuário sai do grupo"
   ON group_members FOR DELETE USING (user_id = auth.uid());
 
 -- invite_codes
-CREATE POLICY "Membros veem convites do grupo"
+CREATE POLICY "Autenticados veem convites"
   ON invite_codes FOR SELECT TO authenticated
-  USING (public.is_group_member(invite_codes.group_id, auth.uid()));
+  USING (true);
 CREATE POLICY "Organizadores criam convites"
   ON invite_codes FOR INSERT TO authenticated
   WITH CHECK (

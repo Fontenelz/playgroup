@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { Suspense, useState, useTransition } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Mail, Eye, EyeOff, UserPlus } from 'lucide-react'
@@ -11,6 +12,16 @@ import { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail } f
 type EmailMode = 'signin' | 'signup'
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next') ?? undefined
   const [isPending, startTransition] = useTransition()
   const [showEmail, setShowEmail] = useState(false)
   const [emailMode, setEmailMode] = useState<EmailMode>('signin')
@@ -23,7 +34,7 @@ export default function LoginPage() {
     setLoadingAction(provider)
     startTransition(async () => {
       const action = provider === 'google' ? signInWithGoogle : signInWithApple
-      const result = await action()
+      const result = await action(next)
       if (result?.error) {
         toast.error(result.error)
         setLoadingAction(null)
@@ -50,7 +61,7 @@ export default function LoginPage() {
         return
       }
 
-      const result = await signInWithEmail(email, password)
+      const result = await signInWithEmail(email, password, next)
       if (result?.error) {
         toast.error(
           result.error === 'Invalid login credentials'

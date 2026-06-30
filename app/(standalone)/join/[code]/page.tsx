@@ -19,7 +19,7 @@ export default async function JoinGroupPage({
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/join/${rawCode}`)}`)
 
   // Find invite code
   const { data: invite } = await supabase

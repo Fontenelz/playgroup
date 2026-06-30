@@ -4,14 +4,17 @@ import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(next?: string) {
   const supabase = await createClient()
   const origin = (await headers()).get('origin')
+  const callbackUrl = next
+    ? `${origin}/api/auth/callback?next=${encodeURIComponent(next)}`
+    : `${origin}/api/auth/callback`
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${origin}/api/auth/callback`,
+      redirectTo: callbackUrl,
     },
   })
 
@@ -24,14 +27,17 @@ export async function signInWithGoogle() {
   }
 }
 
-export async function signInWithApple() {
+export async function signInWithApple(next?: string) {
   const supabase = await createClient()
   const origin = (await headers()).get('origin')
+  const callbackUrl = next
+    ? `${origin}/api/auth/callback?next=${encodeURIComponent(next)}`
+    : `${origin}/api/auth/callback`
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'apple',
     options: {
-      redirectTo: `${origin}/api/auth/callback`,
+      redirectTo: callbackUrl,
     },
   })
 
@@ -44,7 +50,7 @@ export async function signInWithApple() {
   }
 }
 
-export async function signInWithEmail(email: string, password: string) {
+export async function signInWithEmail(email: string, password: string, next?: string) {
   const supabase = await createClient()
 
   const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -67,7 +73,7 @@ export async function signInWithEmail(email: string, password: string) {
     }
   }
 
-  redirect('/')
+  redirect(next ?? '/')
 }
 
 export async function signUpWithEmail(email: string, password: string) {
