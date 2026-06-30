@@ -238,6 +238,27 @@ CREATE TRIGGER trg_on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION handle_new_auth_user();
 
 -- ────────────────────────────────────────────────────────────
+-- HELPERS (SECURITY DEFINER — bypass RLS para checagens internas)
+-- ────────────────────────────────────────────────────────────
+
+-- Verifica se o usuário é membro ativo do grupo sem acionar o RLS de group_members,
+-- evitando recursão infinita nas políticas que consultam a própria tabela.
+CREATE OR REPLACE FUNCTION public.is_group_member(p_group_id UUID, p_user_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.group_members
+    WHERE group_id = p_group_id
+      AND user_id  = p_user_id
+      AND status   = 'active'
+  );
+$$;
+
+-- ────────────────────────────────────────────────────────────
 -- ROW LEVEL SECURITY (RLS)
 -- ────────────────────────────────────────────────────────────
 
@@ -265,10 +286,8 @@ CREATE POLICY "Membros veem o grupo"
   USING (
     deleted_at IS NULL AND (
       access_type = 'public'
-      OR EXISTS (
-        SELECT 1 FROM group_members
-        WHERE group_id = id AND user_id = auth.uid() AND status = 'active'
-      )
+      OR admin_id = auth.uid()
+      OR public.is_group_member(id, auth.uid())
     )
   );
 CREATE POLICY "Autenticados criam grupos"
@@ -282,14 +301,7 @@ CREATE POLICY "Admin exclui grupo"
 -- group_members
 CREATE POLICY "Membros veem outros membros do grupo"
   ON group_members FOR SELECT TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM group_members gm2
-      WHERE gm2.group_id = group_id
-        AND gm2.user_id = auth.uid()
-        AND gm2.status = 'active'
-    )
-  );
+  USING (public.is_group_member(group_id, auth.uid()));
 CREATE POLICY "Usuário entra em grupo"
   ON group_members FOR INSERT TO authenticated
   WITH CHECK (user_id = auth.uid());
