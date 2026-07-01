@@ -159,7 +159,7 @@ export async function getGuestEventPreview(eventId: string): Promise<{ event?: G
     .single()
 
   const row = data as {
-    is_valid: boolean
+    status_code: 'ok' | 'not_found' | 'private' | 'closed'
     event_id: string | null
     group_id: string | null
     title: string | null
@@ -176,8 +176,20 @@ export async function getGuestEventPreview(eventId: string): Promise<{ event?: G
     profile_nickname: string | null
   } | null
 
-  if (error || !row || !row.is_valid || !row.event_id || !row.group_id) {
-    return { error: 'Este evento não existe ou não aceita mais participação avulsa.' }
+  if (error || !row) {
+    return { error: 'Não foi possível carregar este evento agora. Tente novamente.' }
+  }
+  if (row.status_code === 'not_found') {
+    return { error: 'Evento não encontrado.' }
+  }
+  if (row.status_code === 'private') {
+    return { error: 'Este evento é privado. Peça um convite para o grupo.' }
+  }
+  if (row.status_code === 'closed') {
+    return { error: 'Este evento não está mais aceitando confirmações.' }
+  }
+  if (!row.event_id || !row.group_id) {
+    return { error: 'Evento não encontrado.' }
   }
 
   return {

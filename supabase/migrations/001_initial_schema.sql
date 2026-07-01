@@ -385,7 +385,7 @@ GRANT EXECUTE ON FUNCTION public.redeem_invite(TEXT) TO authenticated;
 -- SECURITY DEFINER em vez de depender de RLS em events/groups.
 CREATE OR REPLACE FUNCTION public.get_guest_event_preview(p_event_id UUID)
 RETURNS TABLE (
-  is_valid          BOOLEAN,
+  status_code       TEXT, -- 'ok' | 'not_found' | 'private' | 'closed'
   event_id          UUID,
   group_id          UUID,
   title             TEXT,
@@ -415,16 +415,24 @@ DECLARE
 BEGIN
   SELECT * INTO v_event FROM events WHERE id = p_event_id;
 
-  IF v_event.id IS NOT NULL THEN
-    SELECT * INTO v_group FROM groups WHERE id = v_event.group_id;
+  IF v_event.id IS NULL THEN
+    RETURN QUERY SELECT 'not_found'::TEXT, NULL::UUID, NULL::UUID, NULL::TEXT, NULL::TEXT,
+                         NULL::TIMESTAMPTZ, NULL::TIMESTAMPTZ, NULL::TEXT,
+                         NULL::INTEGER, 0, NULL::TEXT, NULL::TEXT, FALSE, FALSE, NULL::TEXT;
+    RETURN;
   END IF;
 
-  IF v_event.id IS NULL
-     OR v_group.id IS NULL
-     OR v_group.deleted_at IS NOT NULL
-     OR v_group.access_type = 'private'
-     OR v_event.status NOT IN ('published','open') THEN
-    RETURN QUERY SELECT FALSE, NULL::UUID, NULL::UUID, NULL::TEXT, NULL::TEXT,
+  SELECT * INTO v_group FROM groups WHERE id = v_event.group_id;
+
+  IF v_group.id IS NULL OR v_group.deleted_at IS NOT NULL OR v_group.access_type = 'private' THEN
+    RETURN QUERY SELECT 'private'::TEXT, NULL::UUID, NULL::UUID, NULL::TEXT, NULL::TEXT,
+                         NULL::TIMESTAMPTZ, NULL::TIMESTAMPTZ, NULL::TEXT,
+                         NULL::INTEGER, 0, NULL::TEXT, NULL::TEXT, FALSE, FALSE, NULL::TEXT;
+    RETURN;
+  END IF;
+
+  IF v_event.status NOT IN ('published','open') THEN
+    RETURN QUERY SELECT 'closed'::TEXT, NULL::UUID, NULL::UUID, NULL::TEXT, NULL::TEXT,
                          NULL::TIMESTAMPTZ, NULL::TIMESTAMPTZ, NULL::TEXT,
                          NULL::INTEGER, 0, NULL::TEXT, NULL::TEXT, FALSE, FALSE, NULL::TEXT;
     RETURN;
@@ -437,7 +445,7 @@ BEGIN
 
   RETURN QUERY
   SELECT
-    TRUE,
+    'ok'::TEXT,
     v_event.id, v_event.group_id, v_event.title, v_event.sport,
     v_event.starts_at, v_event.ends_at, v_event.location_name,
     v_event.max_participants, COALESCE(v_event.participant_count, 0),
