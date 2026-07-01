@@ -76,7 +76,7 @@ export async function signInWithEmail(email: string, password: string, next?: st
   redirect(next ?? '/')
 }
 
-export async function signUpWithEmail(email: string, password: string) {
+export async function signUpWithEmail(email: string, password: string, next?: string) {
   const supabase = await createClient()
   const origin = (await headers()).get('origin')
 
@@ -84,7 +84,7 @@ export async function signUpWithEmail(email: string, password: string) {
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/api/auth/callback?next=/onboarding`,
+      emailRedirectTo: `${origin}/api/auth/callback?next=${encodeURIComponent(next ?? '/')}`,
     },
   })
 

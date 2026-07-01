@@ -396,8 +396,10 @@ RETURNS TABLE (
   max_participants  INTEGER,
   participant_count INTEGER,
   group_name        TEXT,
-  already_joined    BOOLEAN,
-  is_member         BOOLEAN
+  my_status         TEXT,
+  is_member         BOOLEAN,
+  has_profile       BOOLEAN,
+  profile_nickname  TEXT
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -408,6 +410,8 @@ DECLARE
   v_event events%ROWTYPE;
   v_group groups%ROWTYPE;
   v_uid   UUID := auth.uid();
+  v_nick  TEXT;
+  v_status TEXT;
 BEGIN
   SELECT * INTO v_event FROM events WHERE id = p_event_id;
 
@@ -422,8 +426,13 @@ BEGIN
      OR v_event.status NOT IN ('published','open') THEN
     RETURN QUERY SELECT FALSE, NULL::UUID, NULL::UUID, NULL::TEXT, NULL::TEXT,
                          NULL::TIMESTAMPTZ, NULL::TIMESTAMPTZ, NULL::TEXT,
-                         NULL::INTEGER, 0, NULL::TEXT, FALSE, FALSE;
+                         NULL::INTEGER, 0, NULL::TEXT, NULL::TEXT, FALSE, FALSE, NULL::TEXT;
     RETURN;
+  END IF;
+
+  IF v_uid IS NOT NULL THEN
+    SELECT nickname INTO v_nick FROM users WHERE id = v_uid;
+    SELECT status INTO v_status FROM event_participants WHERE event_id = v_event.id AND user_id = v_uid;
   END IF;
 
   RETURN QUERY
@@ -433,10 +442,10 @@ BEGIN
     v_event.starts_at, v_event.ends_at, v_event.location_name,
     v_event.max_participants, COALESCE(v_event.participant_count, 0),
     v_group.name,
-    (v_uid IS NOT NULL AND EXISTS (
-      SELECT 1 FROM event_participants ep WHERE ep.event_id = v_event.id AND ep.user_id = v_uid
-    )),
-    (v_uid IS NOT NULL AND public.is_group_member(v_group.id, v_uid));
+    v_status,
+    (v_uid IS NOT NULL AND public.is_group_member(v_group.id, v_uid)),
+    (v_nick IS NOT NULL),
+    v_nick;
 END;
 $$;
 
@@ -476,26 +485,27 @@ BEGIN
   END IF;
 
   -- Cria perfil mínimo de convidado só se ainda não existir (nunca sobrescreve
-  -- o nome de quem já tem conta de verdade).
+  -- o nome de quem já tem conta de verdade). Um convidado recém-criado sempre
+  -- entra como "pending": ele ainda não é uma conta de verdade, então a vaga só
+  -- é reservada de fato quando essa mesma sessão voltar aqui e confirmar.
   IF NOT EXISTS (SELECT 1 FROM users WHERE id = v_uid) THEN
     IF v_name IS NULL THEN
       RAISE EXCEPTION 'Informe seu nome';
     END IF;
     INSERT INTO users (id, name, nickname, is_guest)
     VALUES (v_uid, v_name, split_part(v_name, ' ', 1), TRUE);
+    v_status := 'pending';
+  ELSE
+    v_status := CASE WHEN COALESCE(v_event.participant_count, 0) < v_event.max_participants
+                      THEN 'confirmed' ELSE 'pending' END;
   END IF;
 
-  v_status := CASE WHEN COALESCE(v_event.participant_count, 0) < v_event.max_participants
-                    THEN 'confirmed' ELSE 'pending' END;
-
+  -- participant_count é mantido automaticamente pelo trigger trg_update_participant_count
+  -- (dispara em INSERT/UPDATE de event_participants, inclusive dentro deste upsert).
   INSERT INTO event_participants (event_id, user_id, status, confirmed_at)
   VALUES (p_event_id, v_uid, v_status, CASE WHEN v_status = 'confirmed' THEN now() ELSE NULL END)
   ON CONFLICT (event_id, user_id) DO UPDATE
     SET status = EXCLUDED.status, confirmed_at = EXCLUDED.confirmed_at;
-
-  IF v_status = 'confirmed' THEN
-    UPDATE events SET participant_count = COALESCE(participant_count, 0) + 1 WHERE id = p_event_id;
-  END IF;
 
   RETURN v_status;
 END;

@@ -10,7 +10,7 @@ export interface ProfileInput {
   sports: string[]
 }
 
-export async function saveProfile(data: ProfileInput) {
+export async function saveProfile(data: ProfileInput, next?: string) {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -38,7 +38,7 @@ export async function saveProfile(data: ProfileInput) {
     return { error: error.message }
   }
 
-  redirect('/')
+  redirect(next ?? '/')
 }
 
 export async function getProfile() {

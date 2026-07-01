@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import { Suspense, useState, useTransition, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { ChevronLeft, Check } from 'lucide-react'
@@ -22,6 +23,16 @@ const variants = {
 }
 
 export default function OnboardingPage() {
+  return (
+    <Suspense>
+      <OnboardingForm />
+    </Suspense>
+  )
+}
+
+function OnboardingForm() {
+  const searchParams = useSearchParams()
+  const next = searchParams.get('next') ?? '/home'
   const [isPending, startTransition] = useTransition()
 
   const [step, setStep]           = useState(1)
@@ -65,12 +76,12 @@ export default function OnboardingPage() {
       setStep(step + 1)
       return
     }
-    submit('/')
+    submit()
   }
 
-  function submit(next: string) {
+  function submit() {
     startTransition(async () => {
-      const result = await saveProfile({ name, nickname, city, sports })
+      const result = await saveProfile({ name, nickname, city, sports }, next)
       if (result?.error) {
         toast.error(result.error)
         return
@@ -255,7 +266,7 @@ export default function OnboardingPage() {
                   ].map(({ emoji, text }) => (
                     <button
                       key={text}
-                      onClick={() => submit('/home')}
+                      onClick={() => submit()}
                       disabled={isPending}
                       className="w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-800 bg-slate-900 hover:border-slate-700 hover:bg-slate-800 transition-all text-left cursor-pointer active:scale-[0.98] disabled:opacity-50"
                     >

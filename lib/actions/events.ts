@@ -129,13 +129,7 @@ export async function confirmParticipation(eventId: string): Promise<{ error?: s
 
   if (error) return { error: error.message }
 
-  if (hasSpace) {
-    await supabase
-      .from('events')
-      .update({ participant_count: (event.participant_count ?? 0) + 1 })
-      .eq('id', eventId)
-      .eq('participant_count', event.participant_count)
-  }
+  // participant_count é mantido automaticamente pelo trigger trg_update_participant_count.
 
   return {}
 }
@@ -151,8 +145,10 @@ export interface GuestEventPreview {
   max_participants: number
   participant_count: number
   groupName: string
-  alreadyJoined: boolean
+  myStatus: 'confirmed' | 'pending' | 'declined' | null
   isMember: boolean
+  hasProfile: boolean
+  profileNickname: string | null
 }
 
 export async function getGuestEventPreview(eventId: string): Promise<{ event?: GuestEventPreview; error?: string }> {
@@ -174,8 +170,10 @@ export async function getGuestEventPreview(eventId: string): Promise<{ event?: G
     max_participants: number | null
     participant_count: number
     group_name: string | null
-    already_joined: boolean
+    my_status: 'confirmed' | 'pending' | 'declined' | null
     is_member: boolean
+    has_profile: boolean
+    profile_nickname: string | null
   } | null
 
   if (error || !row || !row.is_valid || !row.event_id || !row.group_id) {
@@ -194,31 +192,35 @@ export async function getGuestEventPreview(eventId: string): Promise<{ event?: G
       max_participants: row.max_participants ?? 0,
       participant_count: row.participant_count ?? 0,
       groupName: row.group_name ?? '',
-      alreadyJoined: row.already_joined,
+      myStatus: row.my_status,
       isMember: row.is_member,
+      hasProfile: row.has_profile,
+      profileNickname: row.profile_nickname,
     },
   }
 }
 
-export async function confirmAsGuest(eventId: string, name: string): Promise<{ error?: string }> {
+export async function confirmAsGuest(
+  eventId: string,
+  name: string,
+): Promise<{ status?: 'confirmed' | 'pending'; error?: string }> {
   const trimmedName = name.trim()
-  if (!trimmedName) return { error: 'Informe seu nome' }
-
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
+    if (!trimmedName) return { error: 'Informe seu nome' }
     const { error: anonError } = await supabase.auth.signInAnonymously()
     if (anonError) return { error: 'Não foi possível confirmar presença agora. Tente novamente.' }
   }
 
-  const { error } = await supabase.rpc('confirm_event_guest', {
+  const { data, error } = await supabase.rpc('confirm_event_guest', {
     p_event_id: eventId,
     p_name: trimmedName,
   })
 
   if (error) return { error: error.message }
-  return {}
+  return { status: data as 'confirmed' | 'pending' }
 }
 
 export async function declineParticipation(eventId: string): Promise<{ error?: string }> {

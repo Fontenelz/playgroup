@@ -44,7 +44,9 @@ export async function GET(request: Request) {
       .single()
 
     if (!profile?.city) {
-      return NextResponse.redirect(new URL('/onboarding', origin))
+      const onboardingUrl = new URL('/onboarding', origin)
+      onboardingUrl.searchParams.set('next', next)
+      return NextResponse.redirect(onboardingUrl)
     }
   }
 

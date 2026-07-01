@@ -54,14 +54,16 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
   const [, startTransition] = useTransition()
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
-  const [joined, setJoined] = useState(event.alreadyJoined)
+  const [status, setStatus] = useState(event.myStatus)
 
   const sport = SPORT_MAP[event.sport as SportId]
   const slotsLeft = Math.max(0, event.max_participants - event.participant_count)
   const fill = event.participant_count / event.max_participants
+  const confirmed = status === 'confirmed'
+  const pending = status === 'pending'
 
   function handleConfirm() {
-    if (!name.trim()) {
+    if (!event.hasProfile && !pending && !name.trim()) {
       toast.error('Informe seu nome')
       return
     }
@@ -71,9 +73,12 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
       setLoading(false)
       if (result?.error) {
         toast.error(result.error)
-      } else {
-        setJoined(true)
+      } else if (result.status === 'confirmed') {
+        setStatus('confirmed')
         toast.success('Presença confirmada! 🎉')
+      } else {
+        setStatus('pending')
+        toast('Você entrou como pendente. Confirme sua presença para garantir a vaga.', { duration: 5000 })
       }
     })
   }
@@ -137,15 +142,24 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
               style={{ width: `${Math.min(100, fill * 100)}%` }}
             />
           </div>
-          {slotsLeft === 0 && !joined && (
+          {slotsLeft === 0 && !confirmed && (
             <p className="text-xs text-amber-400">Sem vagas no momento — você entra na fila de espera.</p>
           )}
         </motion.div>
 
-        {joined && (
+        {confirmed && (
           <div className="flex items-center gap-3 bg-primary-500/10 border border-primary-500/30 rounded-xl p-4">
             <Check className="size-4 text-primary-400 flex-shrink-0" strokeWidth={3} />
             <p className="text-sm text-primary-300">Presença confirmada para este evento.</p>
+          </div>
+        )}
+
+        {pending && (
+          <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+            <AlertCircle className="size-4 text-amber-400 flex-shrink-0" />
+            <p className="text-sm text-amber-300">
+              Você está na lista como pendente. Confirme abaixo pra garantir sua vaga.
+            </p>
           </div>
         )}
       </div>
@@ -153,9 +167,17 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
       <div className={
         'fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-4 py-4 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/60 space-y-3'
       }>
-        {joined ? (
+        {confirmed ? (
           <Button fullWidth size="lg" leftIcon={<Check className="size-5" strokeWidth={3} />} disabled>
             Você confirmou presença
+          </Button>
+        ) : pending || event.hasProfile ? (
+          <Button fullWidth size="lg" onClick={handleConfirm} loading={loading}>
+            {pending
+              ? 'Confirmar presença'
+              : event.profileNickname
+              ? `Confirmar presença como ${event.profileNickname}`
+              : 'Confirmar presença'}
           </Button>
         ) : (
           <>
@@ -166,7 +188,7 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
               autoFocus
             />
             <Button fullWidth size="lg" onClick={handleConfirm} loading={loading}>
-              Confirmar presença
+              Entrar como pendente
             </Button>
             <p className="text-center text-xs text-slate-600">
               Avulso, sem precisar criar conta.{' '}

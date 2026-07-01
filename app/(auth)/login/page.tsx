@@ -50,7 +50,7 @@ function LoginForm() {
     setLoadingAction('email')
     startTransition(async () => {
       if (emailMode === 'signup') {
-        const result = await signUpWithEmail(email, password)
+        const result = await signUpWithEmail(email, password, next)
         if (result?.error) {
           toast.error(result.error)
         } else {
