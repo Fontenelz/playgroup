@@ -75,23 +75,23 @@ export default async function EventPage({
   // Fetch participants (confirmed + pending + present)
   const { data: participantsRaw } = await supabase
     .from('event_participants')
-    .select('id, event_id, user_id, status, participant_type, confirmed_at, user:users(id, name, nickname, avatar_url)')
+    .select('id, event_id, user_id, status, is_monthly, confirmed_at, user:users(id, name, nickname, avatar_url)')
     .eq('event_id', eventId)
     .in('status', ['confirmed', 'pending', 'present', 'absent'])
     .order('confirmed_at', { ascending: true })
 
-  // Fetch waitlist
+  // Fetch waitlist (usuários pendentes por falta de vaga)
   const { data: waitlistRaw } = await supabase
     .from('event_participants')
     .select('id, user_id, confirmed_at, user:users(id, name, nickname, avatar_url)')
     .eq('event_id', eventId)
-    .eq('status', 'waitlist')
+    .eq('status', 'pending')
     .order('confirmed_at', { ascending: true })
 
   // Fetch declined
   const { data: declinedRaw } = await supabase
     .from('event_participants')
-    .select('id, event_id, user_id, status, participant_type, user:users(id, name, nickname, avatar_url)')
+    .select('id, event_id, user_id, status, is_monthly, user:users(id, name, nickname, avatar_url)')
     .eq('event_id', eventId)
     .eq('status', 'declined')
 
@@ -111,7 +111,7 @@ export default async function EventPage({
       user_id: p.user_id,
       user: u ?? { id: p.user_id, name: '', nickname: null, avatar_url: null },
       status: p.status as ParticipantStatus,
-      participant_type: p.participant_type,
+      is_monthly: p.is_monthly,
       confirmed_at: p.confirmed_at,
     }
   })
@@ -134,7 +134,7 @@ export default async function EventPage({
       user_id: p.user_id,
       user: u ?? { id: p.user_id, name: '', nickname: null, avatar_url: null },
       status: 'declined' as ParticipantStatus,
-      participant_type: p.participant_type,
+      is_monthly: p.is_monthly,
     }
   })
 

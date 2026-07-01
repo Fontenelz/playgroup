@@ -104,47 +104,9 @@ export async function joinGroup(code: string): Promise<{ error?: string }> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Não autenticado' }
 
-  // Find invite code
-  const { data: invite } = await supabase
-    .from('invite_codes')
-    .select('id, group_id, expires_at, max_uses, uses')
-    .eq('code', code)
-    .single()
+  const { data: groupId, error } = await supabase.rpc('redeem_invite', { p_code: code })
 
-  if (!invite) return { error: 'Código de convite inválido' }
+  if (error) return { error: error.message }
 
-  if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-    return { error: 'Este convite expirou' }
-  }
-
-  if (invite.max_uses !== null && invite.uses >= invite.max_uses) {
-    return { error: 'Este convite atingiu o limite de usos' }
-  }
-
-  // Check if already a member
-  const { data: existing } = await supabase
-    .from('group_members')
-    .select('id')
-    .eq('group_id', invite.group_id)
-    .eq('user_id', user.id)
-    .single()
-
-  if (existing) return { error: 'Você já é membro deste grupo' }
-
-  const { error: insertError } = await supabase.from('group_members').insert({
-    group_id: invite.group_id,
-    user_id: user.id,
-    role: 'participant',
-    member_type: 'regular',
-    status: 'active',
-  })
-
-  if (insertError) return { error: insertError.message }
-
-  await supabase
-    .from('invite_codes')
-    .update({ uses: invite.uses + 1 })
-    .eq('id', invite.id)
-
-  redirect(`/groups/${invite.group_id}`)
+  redirect(`/groups/${groupId}`)
 }

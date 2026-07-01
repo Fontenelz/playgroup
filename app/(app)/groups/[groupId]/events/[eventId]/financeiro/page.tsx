@@ -48,7 +48,7 @@ export default async function FinanceiroPage({
   // Get confirmed participants
   const { data: participantsRaw } = await supabase
     .from('event_participants')
-    .select('id, user_id, participant_type, user:users(id, name, nickname, avatar_url)')
+    .select('id, user_id, is_monthly, user:users(id, name, nickname, avatar_url)')
     .eq('event_id', eventId)
     .in('status', ['confirmed', 'present'])
     .order('confirmed_at', { ascending: true })
@@ -63,7 +63,7 @@ export default async function FinanceiroPage({
         name:       u.name,
         nickname:   u.nickname ?? u.name.split(' ')[0],
         avatar_url: u.avatar_url ?? undefined,
-        is_monthly: p.participant_type === 'monthly',
+        is_monthly: p.is_monthly ?? false,
       }
       return [item]
     })

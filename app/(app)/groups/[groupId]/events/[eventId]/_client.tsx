@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MapPin, Clock, Users, ChevronDown, ChevronUp,
-  Check, X, AlertTriangle, Share2, Shuffle, DollarSign,
+  Check, X, AlertTriangle, Share2, Shuffle, DollarSign, Link2, Copy,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Header } from '@/components/layout/Header'
@@ -52,7 +52,7 @@ export interface ParticipantItem {
   user_id: string
   user: { id: string; name: string; nickname: string | null; avatar_url?: string | null }
   status: ParticipantStatus
-  participant_type?: string | null
+  is_monthly?: boolean | null
   confirmed_at?: string | null
 }
 
@@ -104,6 +104,7 @@ export default function EventPageClient({
   const [showAllConfirmed, setShowAllConfirmed] = useState(false)
   const [showDeclined, setShowDeclined]   = useState(false)
   const [showWaitlist, setShowWaitlist]   = useState(true)
+  const [showShare, setShowShare]         = useState(false)
   const [loading, setLoading]             = useState<string | null>(null)
 
   // Waitlist countdown
@@ -210,7 +211,10 @@ export default function EventPageClient({
         showBack
         backHref={`/groups/${groupId}`}
         rightAction={
-          <button className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 cursor-pointer">
+          <button
+            onClick={() => setShowShare(true)}
+            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 cursor-pointer"
+          >
             <Share2 className="size-4" />
           </button>
         }
@@ -445,7 +449,7 @@ export default function EventPageClient({
                           {nickname}
                           {isMe && <span className="text-xs text-slate-500 ml-1">(você)</span>}
                         </p>
-                        {p.participant_type === 'monthly' && (
+                        {p.is_monthly && (
                           <p className="text-[11px] text-amber-500/80">⭐ Mensalista</p>
                         )}
                       </div>
@@ -632,6 +636,53 @@ export default function EventPageClient({
           </div>
         </div>
       </BottomSheet>
+
+      <EventShareSheet eventId={eventId} isOpen={showShare} onClose={() => setShowShare(false)} />
     </div>
+  )
+}
+
+// ─── Event Share Sheet ──────────────────────────────────────────────────────────
+
+function EventShareSheet({ eventId, isOpen, onClose }: { eventId: string; isOpen: boolean; onClose: () => void }) {
+  const [copied, setCopied] = useState(false)
+  const eventUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/e/${eventId}`
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(eventUrl)
+    setCopied(true)
+    toast.success('Link copiado!')
+    setTimeout(() => setCopied(false), 2500)
+  }
+
+  async function handleShare() {
+    if (typeof navigator.share === 'function') {
+      await navigator.share({ title: 'Confirmar presença no evento', url: eventUrl }).catch(() => null)
+    } else {
+      handleCopy()
+    }
+  }
+
+  return (
+    <BottomSheet isOpen={isOpen} onClose={onClose} title="Compartilhar evento">
+      <div className="space-y-4 pb-2">
+        <p className="text-sm text-slate-400 leading-relaxed">
+          Qualquer pessoa com esse link pode confirmar presença avulsa neste evento, sem precisar entrar no grupo
+          (caso ele não seja privado).
+        </p>
+        <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5">
+          <Link2 className="size-4 text-slate-500 flex-shrink-0" />
+          <span className="text-sm text-slate-300 truncate flex-1">{eventUrl}</span>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" fullWidth leftIcon={<Copy className="size-4" />} onClick={handleCopy}>
+            {copied ? 'Copiado!' : 'Copiar link'}
+          </Button>
+          <Button fullWidth onClick={handleShare}>
+            Compartilhar
+          </Button>
+        </div>
+      </div>
+    </BottomSheet>
   )
 }

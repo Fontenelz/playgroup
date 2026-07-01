@@ -1,6 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Tudo exige sessão por padrão. Único bypass: login e o RSVP avulso de
+// eventos não-privados (/e/[eventId]), que aceita visitante sem conta.
+const PUBLIC_PATHS = ['/login']
+const PUBLIC_PREFIXES = ['/e/']
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -30,23 +35,16 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const isProtectedRoute =
-    pathname.startsWith('/home') ||
-    pathname.startsWith('/groups') ||
-    pathname.startsWith('/ranking') ||
-    pathname.startsWith('/profile') ||
-    pathname.startsWith('/create') ||
-    pathname.startsWith('/notifications')
+  const isPublic = PUBLIC_PATHS.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
 
-  const isAuthRoute = pathname === '/login'
-
-  if (!user && isProtectedRoute) {
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    url.searchParams.set('next', pathname)
     return NextResponse.redirect(url)
   }
 
-  if (user && isAuthRoute) {
+  if (user && pathname === '/login') {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
@@ -57,6 +55,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.json|api/auth/callback|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

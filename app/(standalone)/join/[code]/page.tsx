@@ -3,12 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import JoinGroupClient, { InvalidCodeView } from './_client'
 import type { JoinGroup, JoinMember } from './_client'
 
-interface MemberRow {
-  id: string
-  role: string
-  user: { id: string; name: string; nickname: string | null; avatar_url: string | null } | null
-}
-
 export default async function JoinGroupPage({
   params,
 }: {
@@ -21,89 +15,63 @@ export default async function JoinGroupPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect(`/login?next=${encodeURIComponent(`/join/${rawCode}`)}`)
 
-  // Find invite code
-  const { data: invite } = await supabase
-    .from('invite_codes')
-    .select(`
-      id, code, expires_at, max_uses, uses,
-      group:groups (
-        id, name, description, sport, access_type,
-        monthly_fee, per_event_fee, payment_day
-      )
-    `)
-    .eq('code', code)
+  const { data: previewRows, error: previewError } = await supabase
+    .rpc('get_invite_preview', { p_code: code })
     .single()
 
-  // Check if invalid or expired
-  const isInvalid =
-    !invite ||
-    (invite.expires_at && new Date(invite.expires_at) < new Date()) ||
-    (invite.max_uses !== null && invite.uses >= invite.max_uses)
+  const preview = previewRows as {
+    is_valid: boolean
+    group_id: string | null
+    group_name: string | null
+    description: string | null
+    sport: string | null
+    access_type: string | null
+    monthly_fee: number | null
+    per_event_fee: number | null
+    payment_day: number | null
+    member_count: number
+    is_member: boolean
+  } | null
 
-  if (isInvalid) {
-    return <InvalidCodeView />
-  }
-
-  const groupRaw = (Array.isArray(invite.group) ? invite.group[0] : invite.group) as JoinGroup | null
-  if (!groupRaw) {
+  if (previewError || !preview || !preview.is_valid || !preview.group_id) {
     return <InvalidCodeView />
   }
 
   const group: JoinGroup = {
-    id: groupRaw.id,
-    name: groupRaw.name,
-    description: groupRaw.description,
-    sport: groupRaw.sport,
-    access_type: groupRaw.access_type,
-    monthly_fee: groupRaw.monthly_fee,
-    per_event_fee: groupRaw.per_event_fee,
-    payment_day: groupRaw.payment_day,
+    id: preview.group_id,
+    name: preview.group_name ?? '',
+    description: preview.description,
+    sport: preview.sport ?? '',
+    access_type: preview.access_type ?? 'invite',
+    monthly_fee: preview.monthly_fee,
+    per_event_fee: preview.per_event_fee,
+    payment_day: preview.payment_day,
   }
 
-  // Get member count
-  const { count: memberCount } = await supabase
-    .from('group_members')
-    .select('*', { count: 'exact', head: true })
-    .eq('group_id', group.id)
-    .eq('status', 'active')
+  const { data: membersRaw } = await supabase.rpc('get_invite_members', { p_code: code })
 
-  // Get preview members
-  const { data: membersRaw } = await supabase
-    .from('group_members')
-    .select('id, role, user:users(id, name, nickname, avatar_url)')
-    .eq('group_id', group.id)
-    .eq('status', 'active')
-    .order('joined_at')
-    .limit(8)
-
-  const members: JoinMember[] = (membersRaw ?? [])
-    .map((m) => {
-      const u = (Array.isArray(m.user) ? m.user[0] : m.user) as MemberRow['user'] | null
-      return {
-        id: m.id,
-        role: m.role,
-        user: u ?? { id: '', name: '', nickname: null, avatar_url: null },
-      }
-    })
-    .filter((m) => m.user.id !== '')
-
-  // Check if user is already a member
-  const { data: existingMembership } = await supabase
-    .from('group_members')
-    .select('id')
-    .eq('group_id', group.id)
-    .eq('user_id', user.id)
-    .single()
-
-  const isMember = !!existingMembership
+  const members: JoinMember[] = (
+    (membersRaw ?? []) as {
+      member_id: string
+      role: string
+      user_id: string
+      name: string
+      nickname: string | null
+      avatar_url: string | null
+    }[]
+  ).map((m) => ({
+    id: m.member_id,
+    role: m.role,
+    user: { id: m.user_id, name: m.name, nickname: m.nickname, avatar_url: m.avatar_url },
+  }))
 
   return (
     <JoinGroupClient
       code={code}
       group={group}
-      memberCount={memberCount ?? 0}
+      memberCount={preview.member_count}
       members={members}
-      isMember={isMember}
+      isMember={preview.is_member}
     />
   )
 }

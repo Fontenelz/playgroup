@@ -18,6 +18,7 @@ CREATE TABLE public.users (
   sports        TEXT[]      DEFAULT '{}',
   skill_level   TEXT        NOT NULL DEFAULT 'intermediate'
                               CHECK (skill_level IN ('beginner','intermediate','advanced','professional')),
+  is_guest      BOOLEAN     NOT NULL DEFAULT FALSE,
   push_token    TEXT,
   settings      JSONB       DEFAULT '{}',
   created_at    TIMESTAMPTZ DEFAULT NOW(),
@@ -258,6 +259,127 @@ AS $$
   );
 $$;
 
+-- Pré-visualização de um convite por código, sem expor a tabela invite_codes
+-- (que guarda os códigos de TODOS os grupos) nem colunas sensíveis de groups
+-- (pix_key, admin_id etc.) para quem ainda não é membro.
+CREATE OR REPLACE FUNCTION public.get_invite_preview(p_code TEXT)
+RETURNS TABLE (
+  is_valid      BOOLEAN,
+  group_id      UUID,
+  group_name    TEXT,
+  description   TEXT,
+  sport         TEXT,
+  access_type   TEXT,
+  monthly_fee   DECIMAL(10,2),
+  per_event_fee DECIMAL(10,2),
+  payment_day   INTEGER,
+  member_count  INTEGER,
+  is_member     BOOLEAN
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+  v_invite invite_codes%ROWTYPE;
+  v_uid    UUID := auth.uid();
+BEGIN
+  SELECT * INTO v_invite FROM invite_codes WHERE code = p_code;
+
+  IF v_invite.id IS NULL
+     OR (v_invite.expires_at IS NOT NULL AND v_invite.expires_at < now())
+     OR (v_invite.max_uses IS NOT NULL AND v_invite.uses >= v_invite.max_uses) THEN
+    RETURN QUERY SELECT FALSE, NULL::UUID, NULL::TEXT, NULL::TEXT, NULL::TEXT, NULL::TEXT,
+                         NULL::DECIMAL, NULL::DECIMAL, NULL::INTEGER, 0, FALSE;
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT
+    TRUE,
+    g.id, g.name, g.description, g.sport, g.access_type,
+    g.monthly_fee, g.per_event_fee, g.payment_day,
+    (SELECT COUNT(*)::INTEGER FROM group_members gm WHERE gm.group_id = g.id AND gm.status = 'active'),
+    (v_uid IS NOT NULL AND public.is_group_member(g.id, v_uid))
+  FROM groups g
+  WHERE g.id = v_invite.group_id AND g.deleted_at IS NULL;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_invite_preview(TEXT) TO authenticated;
+
+-- Prévia de membros (avatares) de um grupo a partir de um código de convite válido.
+CREATE OR REPLACE FUNCTION public.get_invite_members(p_code TEXT)
+RETURNS TABLE (
+  member_id  UUID,
+  role       TEXT,
+  user_id    UUID,
+  name       TEXT,
+  nickname   TEXT,
+  avatar_url TEXT
+)
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT gm.id, gm.role, gm.user_id, u.name, u.nickname, u.avatar_url
+  FROM invite_codes ic
+  JOIN group_members gm ON gm.group_id = ic.group_id AND gm.status = 'active'
+  JOIN users u ON u.id = gm.user_id
+  WHERE ic.code = p_code
+    AND (ic.expires_at IS NULL OR ic.expires_at > now())
+    AND (ic.max_uses IS NULL OR ic.uses < ic.max_uses)
+  ORDER BY gm.joined_at
+  LIMIT 8;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_invite_members(TEXT) TO authenticated;
+
+-- Resgata um convite: valida, insere o chamador em group_members e incrementa
+-- o contador de usos — tudo atomicamente, sem exigir SELECT aberto em invite_codes.
+CREATE OR REPLACE FUNCTION public.redeem_invite(p_code TEXT)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_invite invite_codes%ROWTYPE;
+  v_uid    UUID := auth.uid();
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Não autenticado';
+  END IF;
+
+  SELECT * INTO v_invite FROM invite_codes WHERE code = p_code;
+  IF v_invite.id IS NULL THEN
+    RAISE EXCEPTION 'Código de convite inválido';
+  END IF;
+
+  IF v_invite.expires_at IS NOT NULL AND v_invite.expires_at < now() THEN
+    RAISE EXCEPTION 'Este convite expirou';
+  END IF;
+
+  IF v_invite.max_uses IS NOT NULL AND v_invite.uses >= v_invite.max_uses THEN
+    RAISE EXCEPTION 'Este convite atingiu o limite de usos';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM group_members WHERE group_id = v_invite.group_id AND user_id = v_uid) THEN
+    RAISE EXCEPTION 'Você já é membro deste grupo';
+  END IF;
+
+  INSERT INTO group_members (group_id, user_id, role, member_type, status)
+  VALUES (v_invite.group_id, v_uid, 'participant', 'regular', 'active');
+
+  UPDATE invite_codes SET uses = uses + 1 WHERE id = v_invite.id;
+
+  RETURN v_invite.group_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.redeem_invite(TEXT) TO authenticated;
+
 -- ────────────────────────────────────────────────────────────
 -- ROW LEVEL SECURITY (RLS)
 -- ────────────────────────────────────────────────────────────
@@ -290,6 +412,8 @@ CREATE POLICY "Usuário atualiza próprio perfil"
   ON users FOR UPDATE USING (auth.uid() = id);
 
 -- groups
+-- (Pré-visualização por convite não passa por aqui — usa get_invite_preview(),
+--  que só devolve os campos necessários, sem depender de RLS aberto nesta tabela.)
 CREATE POLICY "Membros veem o grupo"
   ON groups FOR SELECT TO authenticated
   USING (
@@ -297,12 +421,6 @@ CREATE POLICY "Membros veem o grupo"
       access_type = 'public'
       OR admin_id = auth.uid()
       OR public.is_group_member(id, auth.uid())
-      OR EXISTS (
-        SELECT 1 FROM invite_codes
-        WHERE invite_codes.group_id = groups.id
-          AND (invite_codes.expires_at IS NULL OR invite_codes.expires_at > now())
-          AND (invite_codes.max_uses IS NULL OR invite_codes.uses < invite_codes.max_uses)
-      )
     )
   );
 CREATE POLICY "Autenticados criam grupos"
@@ -317,9 +435,15 @@ CREATE POLICY "Admin exclui grupo"
 CREATE POLICY "Membros veem outros membros do grupo"
   ON group_members FOR SELECT TO authenticated
   USING (public.is_group_member(group_id, auth.uid()));
-CREATE POLICY "Usuário entra em grupo"
+-- Entrar num grupo existente só é permitido via redeem_invite() (SECURITY DEFINER,
+-- valida o código atomicamente). Inserção direta só é aceita pra quem acabou de
+-- criar o grupo, virando o próprio admin dele.
+CREATE POLICY "Criador do grupo vira admin"
   ON group_members FOR INSERT TO authenticated
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (
+    user_id = auth.uid()
+    AND EXISTS (SELECT 1 FROM groups WHERE id = group_id AND admin_id = auth.uid())
+  );
 CREATE POLICY "Admin gerencia membros"
   ON group_members FOR UPDATE
   USING (
@@ -332,9 +456,12 @@ CREATE POLICY "Usuário sai do grupo"
   ON group_members FOR DELETE USING (user_id = auth.uid());
 
 -- invite_codes
-CREATE POLICY "Autenticados veem convites"
+-- Não-membros nunca leem esta tabela diretamente: a pré-visualização e o resgate
+-- do convite passam por get_invite_preview()/get_invite_members()/redeem_invite(),
+-- que bypassam RLS internamente e só devolvem o necessário.
+CREATE POLICY "Membros veem convites do grupo"
   ON invite_codes FOR SELECT TO authenticated
-  USING (true);
+  USING (public.is_group_member(invite_codes.group_id, auth.uid()));
 CREATE POLICY "Membros criam convites"
   ON invite_codes FOR INSERT TO authenticated
   WITH CHECK (public.is_group_member(invite_codes.group_id, auth.uid()));
@@ -343,11 +470,12 @@ CREATE POLICY "Membros criam convites"
 CREATE POLICY "Membros veem eventos do grupo"
   ON events FOR SELECT TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM group_members
-      WHERE group_id = events.group_id
-        AND user_id = auth.uid()
-        AND status = 'active'
+    public.is_group_member(events.group_id, auth.uid())
+    OR EXISTS (
+      SELECT 1 FROM groups g
+      WHERE g.id = events.group_id
+        AND g.access_type <> 'private'
+        AND g.deleted_at IS NULL
     )
   );
 CREATE POLICY "Organizadores criam eventos"
@@ -379,15 +507,28 @@ CREATE POLICY "Membros veem participantes"
   USING (
     EXISTS (
       SELECT 1 FROM events e
-      JOIN group_members gm ON gm.group_id = e.group_id
+      JOIN groups g ON g.id = e.group_id
       WHERE e.id = event_id
-        AND gm.user_id = auth.uid()
-        AND gm.status = 'active'
+        AND (
+          public.is_group_member(e.group_id, auth.uid())
+          OR (g.access_type <> 'private' AND g.deleted_at IS NULL)
+        )
     )
   );
 CREATE POLICY "Usuário confirma própria presença"
   ON event_participants FOR INSERT TO authenticated
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM events e
+      JOIN groups g ON g.id = e.group_id
+      WHERE e.id = event_participants.event_id
+        AND (
+          public.is_group_member(e.group_id, auth.uid())
+          OR (g.access_type <> 'private' AND e.status IN ('published','open'))
+        )
+    )
+  );
 CREATE POLICY "Usuário atualiza própria presença"
   ON event_participants FOR UPDATE USING (user_id = auth.uid());
 CREATE POLICY "Organizadores gerenciam todos os participantes"
