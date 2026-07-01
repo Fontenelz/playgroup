@@ -158,65 +158,44 @@ export interface GuestEventPreview {
 export async function getGuestEventPreview(eventId: string): Promise<{ event?: GuestEventPreview; error?: string }> {
   const supabase = await createClient()
 
-  const { data: event } = await supabase
-    .from('events')
-    .select(`
-      id, group_id, title, sport, starts_at, ends_at, location_name,
-      max_participants, participant_count, status,
-      group:groups (name, access_type, deleted_at)
-    `)
-    .eq('id', eventId)
+  const { data, error } = await supabase
+    .rpc('get_guest_event_preview', { p_event_id: eventId })
     .single()
 
-  if (!event) return { error: 'Evento não encontrado' }
+  const row = data as {
+    is_valid: boolean
+    event_id: string | null
+    group_id: string | null
+    title: string | null
+    sport: string | null
+    starts_at: string | null
+    ends_at: string | null
+    location_name: string | null
+    max_participants: number | null
+    participant_count: number
+    group_name: string | null
+    already_joined: boolean
+    is_member: boolean
+  } | null
 
-  const group = (Array.isArray(event.group) ? event.group[0] : event.group) as
-    { name: string; access_type: string; deleted_at: string | null } | null
-
-  if (!group || group.deleted_at || group.access_type === 'private') {
-    return { error: 'Este evento é privado. Peça um convite para o grupo.' }
-  }
-  if (!['published', 'open'].includes(event.status)) {
-    return { error: 'Este evento não está mais aceitando confirmações.' }
-  }
-
-  const { data: { user } } = await supabase.auth.getUser()
-  let alreadyJoined = false
-  let isMember = false
-  if (user) {
-    const [{ data: existing }, { data: membership }] = await Promise.all([
-      supabase
-        .from('event_participants')
-        .select('id')
-        .eq('event_id', eventId)
-        .eq('user_id', user.id)
-        .single(),
-      supabase
-        .from('group_members')
-        .select('id')
-        .eq('group_id', event.group_id)
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .single(),
-    ])
-    alreadyJoined = !!existing
-    isMember = !!membership
+  if (error || !row || !row.is_valid || !row.event_id || !row.group_id) {
+    return { error: 'Este evento não existe ou não aceita mais participação avulsa.' }
   }
 
   return {
     event: {
-      id: event.id,
-      groupId: event.group_id,
-      title: event.title,
-      sport: event.sport,
-      starts_at: event.starts_at,
-      ends_at: event.ends_at,
-      location_name: event.location_name,
-      max_participants: event.max_participants,
-      participant_count: event.participant_count ?? 0,
-      groupName: group.name,
-      alreadyJoined,
-      isMember,
+      id: row.event_id,
+      groupId: row.group_id,
+      title: row.title ?? '',
+      sport: row.sport ?? '',
+      starts_at: row.starts_at ?? '',
+      ends_at: row.ends_at ?? '',
+      location_name: row.location_name,
+      max_participants: row.max_participants ?? 0,
+      participant_count: row.participant_count ?? 0,
+      groupName: row.group_name ?? '',
+      alreadyJoined: row.already_joined,
+      isMember: row.is_member,
     },
   }
 }
@@ -227,74 +206,18 @@ export async function confirmAsGuest(eventId: string, name: string): Promise<{ e
 
   const supabase = await createClient()
 
-  let { data: { user } } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    const { data, error } = await supabase.auth.signInAnonymously()
-    if (error || !data.user) return { error: 'Não foi possível confirmar presença agora. Tente novamente.' }
-    user = data.user
+    const { error: anonError } = await supabase.auth.signInAnonymously()
+    if (anonError) return { error: 'Não foi possível confirmar presença agora. Tente novamente.' }
   }
 
-  const { data: event } = await supabase
-    .from('events')
-    .select('id, group_id, max_participants, participant_count, status, group:groups(access_type, deleted_at)')
-    .eq('id', eventId)
-    .single()
-
-  if (!event) return { error: 'Evento não encontrado' }
-
-  const group = (Array.isArray(event.group) ? event.group[0] : event.group) as
-    { access_type: string; deleted_at: string | null } | null
-
-  if (!group || group.deleted_at || group.access_type === 'private') {
-    return { error: 'Este evento é privado.' }
-  }
-  if (!['published', 'open'].includes(event.status)) {
-    return { error: 'Este evento não está mais aceitando confirmações.' }
-  }
-
-  // Cria o perfil de convidado só se ainda não existir um perfil para esse usuário
-  // (evita sobrescrever o nome de quem já tem conta de verdade).
-  const { data: existingProfile } = await supabase
-    .from('users')
-    .select('id')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (!existingProfile) {
-    const { error: profileError } = await supabase.from('users').insert({
-      id: user.id,
-      name: trimmedName,
-      nickname: trimmedName.split(' ')[0] || trimmedName,
-      is_guest: true,
-    })
-    if (profileError) return { error: profileError.message }
-  }
-
-  const hasSpace = (event.participant_count ?? 0) < event.max_participants
-  const status = hasSpace ? 'confirmed' : 'pending'
-
-  const { error } = await supabase
-    .from('event_participants')
-    .upsert(
-      {
-        event_id: eventId,
-        user_id: user.id,
-        status,
-        confirmed_at: hasSpace ? new Date().toISOString() : null,
-      },
-      { onConflict: 'event_id,user_id' },
-    )
+  const { error } = await supabase.rpc('confirm_event_guest', {
+    p_event_id: eventId,
+    p_name: trimmedName,
+  })
 
   if (error) return { error: error.message }
-
-  if (hasSpace) {
-    await supabase
-      .from('events')
-      .update({ participant_count: (event.participant_count ?? 0) + 1 })
-      .eq('id', eventId)
-      .eq('participant_count', event.participant_count)
-  }
-
   return {}
 }
 

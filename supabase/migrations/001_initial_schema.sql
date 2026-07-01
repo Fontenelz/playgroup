@@ -380,6 +380,129 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.redeem_invite(TEXT) TO authenticated;
 
+-- Pré-visualização do RSVP avulso: precisa funcionar para visitante 100% deslogado
+-- (role "anon", sem sessão nenhuma ainda), não só "authenticated" — por isso
+-- SECURITY DEFINER em vez de depender de RLS em events/groups.
+CREATE OR REPLACE FUNCTION public.get_guest_event_preview(p_event_id UUID)
+RETURNS TABLE (
+  is_valid          BOOLEAN,
+  event_id          UUID,
+  group_id          UUID,
+  title             TEXT,
+  sport             TEXT,
+  starts_at         TIMESTAMPTZ,
+  ends_at           TIMESTAMPTZ,
+  location_name     TEXT,
+  max_participants  INTEGER,
+  participant_count INTEGER,
+  group_name        TEXT,
+  already_joined    BOOLEAN,
+  is_member         BOOLEAN
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+DECLARE
+  v_event events%ROWTYPE;
+  v_group groups%ROWTYPE;
+  v_uid   UUID := auth.uid();
+BEGIN
+  SELECT * INTO v_event FROM events WHERE id = p_event_id;
+
+  IF v_event.id IS NOT NULL THEN
+    SELECT * INTO v_group FROM groups WHERE id = v_event.group_id;
+  END IF;
+
+  IF v_event.id IS NULL
+     OR v_group.id IS NULL
+     OR v_group.deleted_at IS NOT NULL
+     OR v_group.access_type = 'private'
+     OR v_event.status NOT IN ('published','open') THEN
+    RETURN QUERY SELECT FALSE, NULL::UUID, NULL::UUID, NULL::TEXT, NULL::TEXT,
+                         NULL::TIMESTAMPTZ, NULL::TIMESTAMPTZ, NULL::TEXT,
+                         NULL::INTEGER, 0, NULL::TEXT, FALSE, FALSE;
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT
+    TRUE,
+    v_event.id, v_event.group_id, v_event.title, v_event.sport,
+    v_event.starts_at, v_event.ends_at, v_event.location_name,
+    v_event.max_participants, COALESCE(v_event.participant_count, 0),
+    v_group.name,
+    (v_uid IS NOT NULL AND EXISTS (
+      SELECT 1 FROM event_participants ep WHERE ep.event_id = v_event.id AND ep.user_id = v_uid
+    )),
+    (v_uid IS NOT NULL AND public.is_group_member(v_group.id, v_uid));
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_guest_event_preview(UUID) TO anon, authenticated;
+
+-- Confirma presença avulsa: exige que o chamador já tenha uma sessão (anônima ou
+-- não — criada pelo app antes de chamar esta função), cria o perfil de convidado
+-- se necessário e grava a presença, tudo atomicamente.
+CREATE OR REPLACE FUNCTION public.confirm_event_guest(p_event_id UUID, p_name TEXT)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_event  events%ROWTYPE;
+  v_group  groups%ROWTYPE;
+  v_uid    UUID := auth.uid();
+  v_status TEXT;
+  v_name   TEXT := NULLIF(TRIM(p_name), '');
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Não autenticado';
+  END IF;
+
+  SELECT * INTO v_event FROM events WHERE id = p_event_id;
+  IF v_event.id IS NULL THEN
+    RAISE EXCEPTION 'Evento não encontrado';
+  END IF;
+
+  SELECT * INTO v_group FROM groups WHERE id = v_event.group_id;
+  IF v_group.id IS NULL OR v_group.deleted_at IS NOT NULL OR v_group.access_type = 'private' THEN
+    RAISE EXCEPTION 'Este evento é privado';
+  END IF;
+
+  IF v_event.status NOT IN ('published','open') THEN
+    RAISE EXCEPTION 'Este evento não está mais aceitando confirmações';
+  END IF;
+
+  -- Cria perfil mínimo de convidado só se ainda não existir (nunca sobrescreve
+  -- o nome de quem já tem conta de verdade).
+  IF NOT EXISTS (SELECT 1 FROM users WHERE id = v_uid) THEN
+    IF v_name IS NULL THEN
+      RAISE EXCEPTION 'Informe seu nome';
+    END IF;
+    INSERT INTO users (id, name, nickname, is_guest)
+    VALUES (v_uid, v_name, split_part(v_name, ' ', 1), TRUE);
+  END IF;
+
+  v_status := CASE WHEN COALESCE(v_event.participant_count, 0) < v_event.max_participants
+                    THEN 'confirmed' ELSE 'pending' END;
+
+  INSERT INTO event_participants (event_id, user_id, status, confirmed_at)
+  VALUES (p_event_id, v_uid, v_status, CASE WHEN v_status = 'confirmed' THEN now() ELSE NULL END)
+  ON CONFLICT (event_id, user_id) DO UPDATE
+    SET status = EXCLUDED.status, confirmed_at = EXCLUDED.confirmed_at;
+
+  IF v_status = 'confirmed' THEN
+    UPDATE events SET participant_count = COALESCE(participant_count, 0) + 1 WHERE id = p_event_id;
+  END IF;
+
+  RETURN v_status;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.confirm_event_guest(UUID, TEXT) TO authenticated;
+
 -- ────────────────────────────────────────────────────────────
 -- ROW LEVEL SECURITY (RLS)
 -- ────────────────────────────────────────────────────────────
@@ -467,17 +590,12 @@ CREATE POLICY "Membros criam convites"
   WITH CHECK (public.is_group_member(invite_codes.group_id, auth.uid()));
 
 -- events
+-- (RSVP avulso não passa por aqui — usa get_guest_event_preview()/confirm_event_guest(),
+--  que cobrem inclusive visitante sem sessão nenhuma, coisa que RLS "TO authenticated"
+--  nunca cobriria.)
 CREATE POLICY "Membros veem eventos do grupo"
   ON events FOR SELECT TO authenticated
-  USING (
-    public.is_group_member(events.group_id, auth.uid())
-    OR EXISTS (
-      SELECT 1 FROM groups g
-      WHERE g.id = events.group_id
-        AND g.access_type <> 'private'
-        AND g.deleted_at IS NULL
-    )
-  );
+  USING (public.is_group_member(events.group_id, auth.uid()));
 CREATE POLICY "Organizadores criam eventos"
   ON events FOR INSERT TO authenticated
   WITH CHECK (
@@ -507,26 +625,17 @@ CREATE POLICY "Membros veem participantes"
   USING (
     EXISTS (
       SELECT 1 FROM events e
-      JOIN groups g ON g.id = e.group_id
-      WHERE e.id = event_id
-        AND (
-          public.is_group_member(e.group_id, auth.uid())
-          OR (g.access_type <> 'private' AND g.deleted_at IS NULL)
-        )
+      WHERE e.id = event_id AND public.is_group_member(e.group_id, auth.uid())
     )
   );
+-- Convidado avulso nunca insere direto aqui — passa por confirm_event_guest().
 CREATE POLICY "Usuário confirma própria presença"
   ON event_participants FOR INSERT TO authenticated
   WITH CHECK (
     user_id = auth.uid()
     AND EXISTS (
       SELECT 1 FROM events e
-      JOIN groups g ON g.id = e.group_id
-      WHERE e.id = event_participants.event_id
-        AND (
-          public.is_group_member(e.group_id, auth.uid())
-          OR (g.access_type <> 'private' AND e.status IN ('published','open'))
-        )
+      WHERE e.id = event_participants.event_id AND public.is_group_member(e.group_id, auth.uid())
     )
   );
 CREATE POLICY "Usuário atualiza própria presença"
