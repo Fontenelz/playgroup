@@ -14,7 +14,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet'
 import { createInviteCode } from '@/lib/actions/groups'
 import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
-import { formatDate, formatTime, formatCurrency, cn } from '@/lib/utils'
+import { formatDate, formatTime, formatCurrency, cn, copyToClipboard } from '@/lib/utils'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -488,7 +488,11 @@ function InviteSheet({ groupId, isOpen, onClose }: { groupId: string; isOpen: bo
 
   async function handleCopy() {
     if (!inviteUrl) return
-    await navigator.clipboard.writeText(inviteUrl)
+    const ok = await copyToClipboard(inviteUrl)
+    if (!ok) {
+      toast.error('Não foi possível copiar automaticamente. Selecione o link manualmente.')
+      return
+    }
     setCopied(true)
     toast.success('Link copiado!')
     setTimeout(() => setCopied(false), 2500)

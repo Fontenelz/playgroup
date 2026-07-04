@@ -51,3 +51,34 @@ export function getAvatarColor(name: string): string {
 export function pluralize(count: number, singular: string, plural: string): string {
   return count === 1 ? `${count} ${singular}` : `${count} ${plural}`
 }
+
+/**
+ * navigator.clipboard só existe em contexto seguro (HTTPS ou localhost) —
+ * acessando via IP da rede local em HTTP puro, a API não existe.
+ * Faz fallback pro método legado via textarea + execCommand.
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return true
+    } catch {
+      // segue pro fallback
+    }
+  }
+
+  try {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.focus()
+    textarea.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(textarea)
+    return ok
+  } catch {
+    return false
+  }
+}

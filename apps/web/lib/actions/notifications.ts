@@ -1,48 +1,33 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { api, ApiError } from '@/lib/api/client'
 
 export async function markNotificationRead(id: string): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autenticado' }
-
-  const { error } = await supabase
-    .from('notifications')
-    .update({ is_read: true })
-    .eq('id', id)
-    .eq('user_id', user.id)
-
-  if (error) return { error: error.message }
-  return {}
+  try {
+    await api.post(`/notifications/${id}/read`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
 }
 
 export async function markAllNotificationsRead(): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autenticado' }
-
-  const { error } = await supabase
-    .from('notifications')
-    .update({ is_read: true })
-    .eq('user_id', user.id)
-    .eq('is_read', false)
-
-  if (error) return { error: error.message }
-  return {}
+  try {
+    await api.post('/notifications/read-all')
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
 }
 
 export async function deleteNotification(id: string): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autenticado' }
-
-  const { error } = await supabase
-    .from('notifications')
-    .delete()
-    .eq('id', id)
-    .eq('user_id', user.id)
-
-  if (error) return { error: error.message }
-  return {}
+  try {
+    await api.delete(`/notifications/${id}`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
 }

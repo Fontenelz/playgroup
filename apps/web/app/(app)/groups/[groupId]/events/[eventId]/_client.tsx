@@ -17,7 +17,7 @@ import { WaitlistRow } from '@/components/shared/ParticipantRow'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { confirmParticipation, declineParticipation } from '@/lib/actions/events'
 import type { SportId } from '@/lib/constants'
-import { formatDate, formatTime, formatCurrency, cn } from '@/lib/utils'
+import { formatDate, formatTime, formatCurrency, cn, copyToClipboard } from '@/lib/utils'
 import type { ParticipantStatus } from '@/types/app.types'
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
@@ -649,7 +649,11 @@ function EventShareSheet({ eventId, isOpen, onClose }: { eventId: string; isOpen
   const eventUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/e/${eventId}`
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(eventUrl)
+    const ok = await copyToClipboard(eventUrl)
+    if (!ok) {
+      toast.error('Não foi possível copiar automaticamente. Selecione o link manualmente.')
+      return
+    }
     setCopied(true)
     toast.success('Link copiado!')
     setTimeout(() => setCopied(false), 2500)

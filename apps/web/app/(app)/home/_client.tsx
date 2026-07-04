@@ -31,14 +31,15 @@ export interface HomeGroup {
 
 export interface HomeEvent {
   id: string
-  group_id: string
+  group_id: string | null
   sport: string
   starts_at: string
   ends_at: string
   max_participants: number
   participant_count: number
   my_status: string | null
-  group_name: string
+  group_name: string | null
+  visibility?: 'link_only' | 'public' | null
 }
 
 export interface HomeNotification {
@@ -142,7 +143,7 @@ export default function HomeClient({ user, groups, events, notifications, unread
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.07 }}
                 >
-                  <Link href={`/groups/${event.group_id}/events/${event.id}`}>
+                  <Link href={event.group_id ? `/groups/${event.group_id}/events/${event.id}` : `/e/${event.id}`}>
                     <div className={cn(
                       'bg-slate-900 border rounded-2xl p-4 transition-all active:scale-[0.99]',
                       status === 'confirmed' ? 'border-primary-500/30' : 'border-slate-800 hover:border-slate-700',
@@ -150,7 +151,9 @@ export default function HomeClient({ user, groups, events, notifications, unread
                       <div className="flex items-start gap-3 mb-3">
                         <SportIcon sport={event.sport as SportId} size="sm" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-100 truncate">{event.group_name}</p>
+                          <p className="text-sm font-semibold text-slate-100 truncate">
+                            {event.group_name ?? 'Evento avulso'}
+                          </p>
                           <p className="text-xs text-slate-400 capitalize mt-0.5">
                             {date} · {time}
                           </p>

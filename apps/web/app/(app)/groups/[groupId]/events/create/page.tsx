@@ -1,6 +1,13 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { api, ApiError } from '@/lib/api/client'
 import { CreateEventClient } from './_client'
+
+interface GroupBasic {
+  id: string
+  name: string
+  sport: string
+  per_event_fee: number | null
+}
 
 export default async function CreateEventPage({
   params,
@@ -8,15 +15,12 @@ export default async function CreateEventPage({
   params: Promise<{ groupId: string }>
 }) {
   const { groupId } = await params
-  const supabase = await createClient()
 
-  const { data: group } = await supabase
-    .from('groups')
-    .select('id, name, sport, per_event_fee')
-    .eq('id', groupId)
-    .single()
-
-  if (!group) notFound()
-
-  return <CreateEventClient group={group} />
+  try {
+    const group = await api.get<GroupBasic>(`/groups/${groupId}/basic`)
+    return <CreateEventClient group={group} />
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) notFound()
+    throw err
+  }
 }

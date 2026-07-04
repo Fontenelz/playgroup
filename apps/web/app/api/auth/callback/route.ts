@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { api } from '@/lib/api/client'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -37,11 +38,7 @@ export async function GET(request: Request) {
   //  por isso checamos `city` como indicador de onboarding completo)
   const { data: { user } } = await supabase.auth.getUser()
   if (user) {
-    const { data: profile } = await supabase
-      .from('users')
-      .select('city')
-      .eq('id', user.id)
-      .single()
+    const profile = await api.get<{ city: string | null } | null>('/users/me')
 
     if (!profile?.city) {
       const onboardingUrl = new URL('/onboarding', origin)

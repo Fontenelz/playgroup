@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { SPORT_MAP } from '@/lib/constants'
+import { api, ApiError } from '@/lib/api/client'
 
 export interface CreateEventInput {
   date: string
@@ -22,121 +22,78 @@ export interface CreateEventInput {
 
 export async function createEvent(groupId: string, input: CreateEventInput) {
   const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
   if (authError || !user) return { error: 'Não autenticado' }
 
-  const { data: group } = await supabase
-    .from('groups')
-    .select('sport')
-    .eq('id', groupId)
-    .single()
-
-  if (!group) return { error: 'Grupo não encontrado' }
-
-  const sportLabel = SPORT_MAP[group.sport as keyof typeof SPORT_MAP]?.label ?? group.sport
-
-  const startsAt = new Date(`${input.date}T${input.startTime}:00`)
-  const endsAt   = new Date(`${input.date}T${input.endTime}:00`)
-  if (endsAt <= startsAt) endsAt.setDate(endsAt.getDate() + 1)
-
-  const dateLabel = startsAt.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })
-  const title = `${sportLabel} · ${dateLabel}`
-
-  const isRecurring = input.recurrence !== 'none'
-  let recurrenceRule: string | null = null
-  if (isRecurring) {
-    const freq = input.recurrence === 'biweekly' ? 'WEEKLY;INTERVAL=2' : input.recurrence.toUpperCase()
-    const byday =
-      (input.recurrence === 'weekly' || input.recurrence === 'biweekly') && input.weekDays.length
-        ? `;BYDAY=${input.weekDays.join(',')}`
-        : ''
-    const until = input.seriesEnd ? `;UNTIL=${input.seriesEnd.replace(/-/g, '')}` : ''
-    recurrenceRule = `FREQ=${freq}${byday}${until}`
+  try {
+    await api.post(`/groups/${groupId}/events`, {
+      ...input,
+      locationName: input.locationName || undefined,
+      locationAddress: input.locationAddress || undefined,
+      eventFee: input.eventFee || undefined,
+      notes: input.notes || undefined,
+    })
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
   }
-
-  let confirmDeadline: string | null = null
-  if (isRecurring && input.monthlySlots > 0 && input.monthlyConfirmHours > 0) {
-    confirmDeadline = new Date(
-      startsAt.getTime() - input.monthlyConfirmHours * 60 * 60 * 1000,
-    ).toISOString()
-  }
-
-  const fee = parseFloat(input.eventFee) || null
-
-  const { error } = await supabase.from('events').insert({
-    group_id:                groupId,
-    title,
-    sport:                   group.sport,
-    starts_at:               startsAt.toISOString(),
-    ends_at:                 endsAt.toISOString(),
-    location_name:           input.locationName  || null,
-    location_address:        input.locationAddress || null,
-    max_participants:        input.maxParticipants,
-    monthly_slots:           input.monthlySlots,
-    status:                  'published',
-    is_recurring:            isRecurring,
-    recurrence_rule:         recurrenceRule,
-    monthly_confirm_deadline: confirmDeadline,
-    event_fee:               fee,
-    notes:                   input.notes || null,
-    created_by:              user.id,
-  })
-
-  if (error) return { error: error.message }
 
   redirect(`/groups/${groupId}`)
 }
 
-export async function confirmParticipation(eventId: string): Promise<{ error?: string }> {
+export interface CreateStandaloneEventInput {
+  sport: string
+  date: string
+  startTime: string
+  endTime: string
+  locationName: string
+  locationAddress: string
+  maxParticipants: number
+  visibility: 'link_only' | 'public'
+  notes: string
+}
+
+export async function createStandaloneEvent(input: CreateStandaloneEventInput) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autenticado' }
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+  if (authError || !user) return { error: 'Não autenticado' }
 
-  // Get event
-  const { data: event } = await supabase
-    .from('events')
-    .select('id, group_id, max_participants, participant_count')
-    .eq('id', eventId)
-    .single()
+  let eventId: string
+  try {
+    const result = await api.post<{ id: string }>('/events', {
+      ...input,
+      locationName: input.locationName || undefined,
+      locationAddress: input.locationAddress || undefined,
+      notes: input.notes || undefined,
+    })
+    eventId = result.id
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
 
-  if (!event) return { error: 'Evento não encontrado' }
+  redirect(`/e/${eventId}`)
+}
 
-  // Check if user is a group member
-  const { data: membership } = await supabase
-    .from('group_members')
-    .select('id')
-    .eq('group_id', event.group_id)
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .single()
-
-  if (!membership) return { error: 'Você não é membro deste grupo' }
-
-  const hasSpace = (event.participant_count ?? 0) < event.max_participants
-  const status = hasSpace ? 'confirmed' : 'pending'
-
-  const { error } = await supabase
-    .from('event_participants')
-    .upsert(
-      {
-        event_id: eventId,
-        user_id: user.id,
-        status,
-        confirmed_at: hasSpace ? new Date().toISOString() : null,
-      },
-      { onConflict: 'event_id,user_id' },
-    )
-
-  if (error) return { error: error.message }
-
-  // participant_count é mantido automaticamente pelo trigger trg_update_participant_count.
-
-  return {}
+export async function confirmParticipation(eventId: string): Promise<{ error?: string }> {
+  try {
+    await api.post(`/events/${eventId}/participation/confirm`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
 }
 
 export interface GuestEventPreview {
   id: string
-  groupId: string
+  groupId?: string
   title: string
   sport: string
   starts_at: string
@@ -144,39 +101,41 @@ export interface GuestEventPreview {
   location_name: string | null
   max_participants: number
   participant_count: number
-  groupName: string
+  groupName?: string
+  visibility?: 'link_only' | 'public'
+  isOwner: boolean
   myStatus: 'confirmed' | 'pending' | 'declined' | null
   isMember: boolean
   hasProfile: boolean
   profileNickname: string | null
 }
 
-export async function getGuestEventPreview(eventId: string): Promise<{ event?: GuestEventPreview; error?: string }> {
-  const supabase = await createClient()
+export async function getGuestEventPreview(
+  eventId: string,
+): Promise<{ event?: GuestEventPreview; error?: string; authRequired?: boolean }> {
+  const row = await api
+    .get<{
+      status_code: 'ok' | 'not_found' | 'private' | 'closed' | 'auth_required'
+      event_id: string | null
+      group_id: string | null
+      title: string | null
+      sport: string | null
+      starts_at: string | null
+      ends_at: string | null
+      location_name: string | null
+      max_participants: number | null
+      participant_count: number
+      group_name: string | null
+      visibility: 'link_only' | 'public' | null
+      is_owner: boolean
+      my_status: 'confirmed' | 'pending' | 'declined' | null
+      is_member: boolean
+      has_profile: boolean
+      profile_nickname: string | null
+    }>(`/guest-events/${eventId}`)
+    .catch(() => null)
 
-  const { data, error } = await supabase
-    .rpc('get_guest_event_preview', { p_event_id: eventId })
-    .single()
-
-  const row = data as {
-    status_code: 'ok' | 'not_found' | 'private' | 'closed'
-    event_id: string | null
-    group_id: string | null
-    title: string | null
-    sport: string | null
-    starts_at: string | null
-    ends_at: string | null
-    location_name: string | null
-    max_participants: number | null
-    participant_count: number
-    group_name: string | null
-    my_status: 'confirmed' | 'pending' | 'declined' | null
-    is_member: boolean
-    has_profile: boolean
-    profile_nickname: string | null
-  } | null
-
-  if (error || !row) {
+  if (!row) {
     return { error: 'Não foi possível carregar este evento agora. Tente novamente.' }
   }
   if (row.status_code === 'not_found') {
@@ -188,14 +147,17 @@ export async function getGuestEventPreview(eventId: string): Promise<{ event?: G
   if (row.status_code === 'closed') {
     return { error: 'Este evento não está mais aceitando confirmações.' }
   }
-  if (!row.event_id || !row.group_id) {
+  if (row.status_code === 'auth_required') {
+    return { authRequired: true }
+  }
+  if (!row.event_id) {
     return { error: 'Evento não encontrado.' }
   }
 
   return {
     event: {
       id: row.event_id,
-      groupId: row.group_id,
+      groupId: row.group_id ?? undefined,
       title: row.title ?? '',
       sport: row.sport ?? '',
       starts_at: row.starts_at ?? '',
@@ -203,7 +165,9 @@ export async function getGuestEventPreview(eventId: string): Promise<{ event?: G
       location_name: row.location_name,
       max_participants: row.max_participants ?? 0,
       participant_count: row.participant_count ?? 0,
-      groupName: row.group_name ?? '',
+      groupName: row.group_name ?? undefined,
+      visibility: row.visibility ?? undefined,
+      isOwner: row.is_owner,
       myStatus: row.my_status,
       isMember: row.is_member,
       hasProfile: row.has_profile,
@@ -219,34 +183,105 @@ export async function confirmAsGuest(
   const trimmedName = name.trim()
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) {
     if (!trimmedName) return { error: 'Informe seu nome' }
     const { error: anonError } = await supabase.auth.signInAnonymously()
     if (anonError) return { error: 'Não foi possível confirmar presença agora. Tente novamente.' }
   }
 
-  const { data, error } = await supabase.rpc('confirm_event_guest', {
-    p_event_id: eventId,
-    p_name: trimmedName,
-  })
-
-  if (error) return { error: error.message }
-  return { status: data as 'confirmed' | 'pending' }
+  try {
+    const result = await api.post<{ status: 'confirmed' | 'pending' }>(`/guest-events/${eventId}/confirm`, {
+      name: trimmedName || undefined,
+    })
+    return { status: result.status }
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
 }
 
 export async function declineParticipation(eventId: string): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Não autenticado' }
+  try {
+    await api.post(`/events/${eventId}/participation/decline`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
 
-  const { error } = await supabase
-    .from('event_participants')
-    .upsert(
-      { event_id: eventId, user_id: user.id, status: 'declined' },
-      { onConflict: 'event_id,user_id' },
-    )
+export async function approveParticipant(eventId: string, participantUserId: string): Promise<{ error?: string }> {
+  try {
+    await api.post(`/events/${eventId}/participants/${participantUserId}/approve`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
 
-  if (error) return { error: error.message }
-  return {}
+export async function rejectParticipant(eventId: string, participantUserId: string): Promise<{ error?: string }> {
+  try {
+    await api.post(`/events/${eventId}/participants/${participantUserId}/reject`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
+
+export interface PublicEventCard {
+  id: string
+  title: string
+  sport: string
+  starts_at: string
+  ends_at: string
+  location_name: string | null
+  max_participants: number
+  participant_count: number
+  creator: { name: string; nickname: string; avatar_url?: string } | null
+  myStatus: 'confirmed' | 'pending' | 'declined' | null
+}
+
+export async function getPublicEventsFeed(sport?: string): Promise<{ events: PublicEventCard[]; error?: string }> {
+  try {
+    const result = await api.get<{
+      events: Array<{
+        id: string
+        title: string
+        sport: string
+        starts_at: string
+        ends_at: string
+        location_name: string | null
+        max_participants: number
+        participant_count: number
+        creator: { name: string; nickname: string; avatar_url?: string } | null
+        my_status: 'confirmed' | 'pending' | 'declined' | null
+      }>
+      total: number
+      page: number
+      take: number
+    }>(`/events/discover${sport ? `?sport=${encodeURIComponent(sport)}` : ''}`)
+
+    return {
+      events: result.events.map((e) => ({
+        id: e.id,
+        title: e.title,
+        sport: e.sport,
+        starts_at: e.starts_at,
+        ends_at: e.ends_at,
+        location_name: e.location_name,
+        max_participants: e.max_participants,
+        participant_count: e.participant_count,
+        creator: e.creator,
+        myStatus: e.my_status,
+      })),
+    }
+  } catch (err) {
+    if (err instanceof ApiError) return { events: [], error: err.message }
+    throw err
+  }
 }

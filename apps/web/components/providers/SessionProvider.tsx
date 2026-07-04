@@ -12,18 +12,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient()
 
     async function syncUser() {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
 
-      if (!authUser) {
+      if (!session) {
         setUser(null)
         return
       }
 
-      const { data: profile } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: 'no-store',
+      })
+      const profile = res.ok ? await res.json() : null
 
       setUser(profile as User | null)
     }

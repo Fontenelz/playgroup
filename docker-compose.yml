@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: playgroup-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: playgroup
+      POSTGRES_PASSWORD: playgroup
+      POSTGRES_DB: playgroup
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U playgroup -d playgroup"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

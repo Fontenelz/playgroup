@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { ChevronLeft, MapPin, Clock, Users, Check, AlertCircle } from 'lucide-react'
+import { ChevronLeft, MapPin, Clock, Users, Check, AlertCircle, Settings, LogIn } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -22,12 +23,12 @@ export function InvalidEventView({ message }: { message?: string }) {
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto">
       <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/60 px-4 py-4">
-        <button
-          onClick={() => router.back()}
+        <Link
+          href="/home"
           className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
         >
           <ChevronLeft className="size-5" />
-        </button>
+        </Link>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
         <div className="size-16 rounded-2xl bg-red-500/15 flex items-center justify-center">
@@ -47,10 +48,41 @@ export function InvalidEventView({ message }: { message?: string }) {
   )
 }
 
+// ─── Auth required view ──────────────────────────────────────────────────────────
+
+export function AuthRequiredView({ eventId }: { eventId: string }) {
+  const router = useRouter()
+  return (
+    <div className="min-h-screen flex flex-col max-w-lg mx-auto">
+      <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/60 px-4 py-4">
+        <Link
+          href="/home"
+          className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+        >
+          <ChevronLeft className="size-5" />
+        </Link>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-5">
+        <div className="size-16 rounded-2xl bg-primary-500/15 flex items-center justify-center">
+          <LogIn className="size-8 text-primary-400" />
+        </div>
+        <div>
+          <p className="text-lg font-bold text-slate-100">Entre pra ver esse evento</p>
+          <p className="text-sm text-slate-400 mt-1">
+            Esse é um evento público — só usuários com conta no PlayGroup podem ver os detalhes e participar.
+          </p>
+        </div>
+        <Button onClick={() => router.push(`/login?next=${encodeURIComponent(`/e/${eventId}`)}`)}>
+          Entrar
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Guest RSVP client ────────────────────────────────────────────────────────────
 
 export default function GuestEventClient({ event }: { event: GuestEventPreview }) {
-  const router = useRouter()
   const [, startTransition] = useTransition()
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -61,6 +93,7 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
   const fill = event.participant_count / event.max_participants
   const confirmed = status === 'confirmed'
   const pending = status === 'pending'
+  const pendingApproval = pending && event.visibility === 'public'
 
   function handleConfirm() {
     if (!event.hasProfile && !pending && !name.trim()) {
@@ -78,7 +111,12 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
         toast.success('Presença confirmada! 🎉')
       } else {
         setStatus('pending')
-        toast('Você entrou como pendente. Confirme sua presença para garantir a vaga.', { duration: 5000 })
+        toast(
+          event.visibility === 'public'
+            ? 'Pedido enviado! O organizador vai analisar sua participação.'
+            : 'Você entrou como pendente. Confirme sua presença para garantir a vaga.',
+          { duration: 5000 },
+        )
       }
     })
   }
@@ -88,12 +126,12 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
 
       <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/60 px-4 py-4">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.back()}
+          <Link
+            href="/home"
             className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
           >
             <ChevronLeft className="size-5" />
-          </button>
+          </Link>
           <p className="text-sm font-semibold text-slate-100">Confirmar presença</p>
         </div>
       </div>
@@ -108,9 +146,22 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
           <SportIcon sport={event.sport as SportId} size="lg" />
           <div>
             <h1 className="text-2xl font-bold text-slate-100">{event.title}</h1>
-            <p className="text-sm text-slate-400 mt-1">{event.groupName}</p>
+            {event.groupName ? (
+              <p className="text-sm text-slate-400 mt-1">{event.groupName}</p>
+            ) : (
+              <p className="text-sm text-slate-400 mt-1">Evento avulso</p>
+            )}
           </div>
           <Badge variant="primary" size="sm">{sport?.emoji} {sport?.label}</Badge>
+          {event.isOwner && (
+            <Link
+              href={`/e/${event.id}/gerenciar`}
+              className="flex items-center gap-1.5 text-xs text-primary-400 hover:text-primary-300 transition-colors"
+            >
+              <Settings className="size-3.5" />
+              Gerenciar evento
+            </Link>
+          )}
         </motion.div>
 
         <motion.div
@@ -158,7 +209,9 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
           <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
             <AlertCircle className="size-4 text-amber-400 flex-shrink-0" />
             <p className="text-sm text-amber-300">
-              Você está na lista como pendente. Confirme abaixo pra garantir sua vaga.
+              {pendingApproval
+                ? 'Sua participação está aguardando aprovação do organizador.'
+                : 'Você está na lista como pendente. Confirme abaixo pra garantir sua vaga.'}
             </p>
           </div>
         )}
@@ -171,10 +224,16 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
           <Button fullWidth size="lg" leftIcon={<Check className="size-5" strokeWidth={3} />} disabled>
             Você confirmou presença
           </Button>
+        ) : pendingApproval ? (
+          <Button fullWidth size="lg" leftIcon={<Clock className="size-5" />} disabled>
+            Aguardando aprovação do organizador
+          </Button>
         ) : pending || event.hasProfile ? (
           <Button fullWidth size="lg" onClick={handleConfirm} loading={loading}>
             {pending
               ? 'Confirmar presença'
+              : event.visibility === 'public'
+              ? 'Pedir pra participar'
               : event.profileNickname
               ? `Confirmar presença como ${event.profileNickname}`
               : 'Confirmar presença'}

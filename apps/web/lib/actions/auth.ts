@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { api } from '@/lib/api/client'
 
 export async function signInWithGoogle(next?: string) {
   const supabase = await createClient()
@@ -59,17 +60,14 @@ export async function signInWithEmail(email: string, password: string, next?: st
     return { error: error.message }
   }
 
-  // Verifica se usuário tem perfil; se não, manda para onboarding
+  // Verifica se o perfil já foi completado (mesmo indicador usado no callback OAuth)
   const { data: { user } } = await supabase.auth.getUser()
   if (user) {
-    const { data: profile } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', user.id)
-      .single()
+    const profile = await api.get<{ city: string | null } | null>('/users/me')
 
-    if (!profile) {
-      redirect('/onboarding')
+    if (!profile?.city) {
+      const onboardingUrl = next ? `/onboarding?next=${encodeURIComponent(next)}` : '/onboarding'
+      redirect(onboardingUrl)
     }
   }
 

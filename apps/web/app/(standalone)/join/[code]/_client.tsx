@@ -12,7 +12,7 @@ import { SportIcon } from '@/components/shared/SportIcon'
 import { joinGroup } from '@/lib/actions/groups'
 import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -222,7 +222,7 @@ export default function JoinGroupClient({ code, group, memberCount, members, isM
               <div className="flex justify-between">
                 <span className="text-sm text-slate-400">Mensalidade</span>
                 <span className="text-sm font-semibold text-slate-100">
-                  R$ {group.monthly_fee.toFixed(2).replace('.', ',')}/mês
+                  {formatCurrency(group.monthly_fee)}/mês
                 </span>
               </div>
             )}
@@ -230,7 +230,7 @@ export default function JoinGroupClient({ code, group, memberCount, members, isM
               <div className="flex justify-between">
                 <span className="text-sm text-slate-400">Avulso/evento</span>
                 <span className="text-sm font-semibold text-slate-100">
-                  R$ {group.per_event_fee.toFixed(2).replace('.', ',')}/evento
+                  {formatCurrency(group.per_event_fee)}/evento
                 </span>
               </div>
             )}

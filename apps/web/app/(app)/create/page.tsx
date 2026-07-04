@@ -33,7 +33,11 @@ export default function CreatePage() {
         </Link>
 
         <Link href="/groups">
-          <OptionCard emoji="📅" label="Criar evento" desc="Avulso ou recorrente" />
+          <OptionCard emoji="📅" label="Criar evento de grupo" desc="Recorrente, com mensalidade e financeiro" />
+        </Link>
+
+        <Link href="/create/evento">
+          <OptionCard emoji="⚡" label="Criar evento avulso" desc="Uma partida pontual, sem precisar de um grupo" />
         </Link>
 
         {/* Invite card — expands to reveal input */}

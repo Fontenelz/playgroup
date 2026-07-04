@@ -1,0 +1,20 @@
+{
+  "name": "playgroup-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:studio": "pnpm --filter api prisma:studio",
+    "db:seed": "pnpm --filter api prisma:seed"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.1",
+    "turbo": "^2.5.8"
+  },
+  "packageManager": "pnpm@10.15.1"
+}

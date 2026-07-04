@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { api, ApiError } from '@/lib/api/client'
 
 export interface ProfileInput {
   name: string
@@ -12,30 +13,20 @@ export interface ProfileInput {
 
 export async function saveProfile(data: ProfileInput, next?: string) {
   const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
 
   if (authError || !user) {
     redirect('/login')
   }
 
-  // avatar vindo do Google / Apple OAuth (user_metadata.avatar_url ou .picture)
-  const avatar_url: string | null =
-    user.user_metadata?.avatar_url ??
-    user.user_metadata?.picture ??
-    null
-
-  const { error } = await supabase.from('users').upsert({
-    id: user.id,
-    name: data.name,
-    nickname: data.nickname,
-    city: data.city,
-    sports: data.sports,
-    skill_level: 'intermediate',
-    ...(avatar_url ? { avatar_url } : {}),
-  })
-
-  if (error) {
-    return { error: error.message }
+  try {
+    await api.put('/users/me', data)
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
   }
 
   redirect(next ?? '/')
@@ -43,34 +34,24 @@ export async function saveProfile(data: ProfileInput, next?: string) {
 
 export async function getProfile() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  return data
+  try {
+    return await api.get('/users/me')
+  } catch {
+    return null
+  }
 }
 
 export async function updateProfile(data: Partial<ProfileInput>) {
-  const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  if (authError || !user) {
-    return { error: 'Não autenticado' }
+  try {
+    await api.patch('/users/me', data)
+    return { success: true }
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
   }
-
-  const { error } = await supabase
-    .from('users')
-    .update(data)
-    .eq('id', user.id)
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  return { success: true }
 }

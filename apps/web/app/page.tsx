@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { api } from '@/lib/api/client'
 import { redirect } from 'next/navigation'
 
 export default async function RootPage() {
@@ -9,11 +10,7 @@ export default async function RootPage() {
     redirect('/login')
   }
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('city')
-    .eq('id', user.id)
-    .single()
+  const profile = await api.get<{ city: string | null } | null>('/users/me')
 
   if (!profile?.city) {
     redirect('/onboarding')

@@ -1,33 +1,20 @@
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
+import { api } from '@/lib/api/client'
 import { Header } from '@/components/layout/Header'
+import { GroupsEventsTabs } from '@/components/shared/GroupsEventsTabs'
 import { GroupList } from './_components'
 
+interface GroupRow {
+  id: string
+  name: string
+  sport: string
+  max_members: number
+  role: 'admin' | 'organizer' | 'participant'
+}
+
 export default async function GroupsPage() {
-  const supabase = await createClient()
-
-  const { data: memberships } = await supabase
-    .from('group_members')
-    .select('role, member_type, group:groups(id, name, sport, max_members)')
-    .eq('status', 'active')
-    .is('groups.deleted_at', null)
-    .order('joined_at', { ascending: false })
-
-  type GroupRow = { id: string; name: string; sport: string; max_members: number }
-
-  const groups = (memberships ?? [])
-    .filter((m) => m.group !== null)
-    .map((m) => {
-      const g = m.group as unknown as GroupRow
-      return {
-        id:          g.id,
-        name:        g.name,
-        sport:       g.sport,
-        max_members: g.max_members,
-        role:        m.role as 'admin' | 'organizer' | 'participant',
-      }
-    })
+  const groups = await api.get<GroupRow[]>('/groups')
 
   const adminGroups  = groups.filter((g) => g.role === 'admin')
   const memberGroups = groups.filter((g) => g.role !== 'admin')
@@ -45,6 +32,8 @@ export default async function GroupsPage() {
           </Link>
         }
       />
+
+      <GroupsEventsTabs active="groups" />
 
       <div className="px-4 py-4 space-y-6">
         {groups.length === 0 && (

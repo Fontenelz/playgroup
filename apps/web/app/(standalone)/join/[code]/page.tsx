@@ -1,7 +1,23 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { api } from '@/lib/api/client'
 import JoinGroupClient, { InvalidCodeView } from './_client'
 import type { JoinGroup, JoinMember } from './_client'
+
+interface InvitePreviewResponse {
+  is_valid: boolean
+  group_id?: string
+  group_name?: string
+  description?: string | null
+  sport?: string
+  access_type?: string
+  monthly_fee?: number | null
+  per_event_fee?: number | null
+  payment_day?: number | null
+  member_count?: number
+  is_member?: boolean
+  members?: { id: string; role: string; user: { id: string; name: string; nickname: string | null; avatar_url: string | null } }[]
+}
 
 export default async function JoinGroupPage({
   params,
@@ -15,63 +31,36 @@ export default async function JoinGroupPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect(`/login?next=${encodeURIComponent(`/join/${rawCode}`)}`)
 
-  const { data: previewRows, error: previewError } = await supabase
-    .rpc('get_invite_preview', { p_code: code })
-    .single()
+  const preview = await api.get<InvitePreviewResponse>(`/invites/${encodeURIComponent(code)}`).catch(() => null)
 
-  const preview = previewRows as {
-    is_valid: boolean
-    group_id: string | null
-    group_name: string | null
-    description: string | null
-    sport: string | null
-    access_type: string | null
-    monthly_fee: number | null
-    per_event_fee: number | null
-    payment_day: number | null
-    member_count: number
-    is_member: boolean
-  } | null
-
-  if (previewError || !preview || !preview.is_valid || !preview.group_id) {
+  if (!preview || !preview.is_valid || !preview.group_id) {
     return <InvalidCodeView />
   }
 
   const group: JoinGroup = {
     id: preview.group_id,
     name: preview.group_name ?? '',
-    description: preview.description,
+    description: preview.description ?? null,
     sport: preview.sport ?? '',
     access_type: preview.access_type ?? 'invite',
-    monthly_fee: preview.monthly_fee,
-    per_event_fee: preview.per_event_fee,
-    payment_day: preview.payment_day,
+    monthly_fee: preview.monthly_fee ?? null,
+    per_event_fee: preview.per_event_fee ?? null,
+    payment_day: preview.payment_day ?? null,
   }
 
-  const { data: membersRaw } = await supabase.rpc('get_invite_members', { p_code: code })
-
-  const members: JoinMember[] = (
-    (membersRaw ?? []) as {
-      member_id: string
-      role: string
-      user_id: string
-      name: string
-      nickname: string | null
-      avatar_url: string | null
-    }[]
-  ).map((m) => ({
-    id: m.member_id,
+  const members: JoinMember[] = (preview.members ?? []).map((m) => ({
+    id: m.id,
     role: m.role,
-    user: { id: m.user_id, name: m.name, nickname: m.nickname, avatar_url: m.avatar_url },
+    user: m.user,
   }))
 
   return (
     <JoinGroupClient
       code={code}
       group={group}
-      memberCount={preview.member_count}
+      memberCount={preview.member_count ?? 0}
       members={members}
-      isMember={preview.is_member}
+      isMember={preview.is_member ?? false}
     />
   )
 }
