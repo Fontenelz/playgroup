@@ -7,7 +7,7 @@ import { api } from '@/lib/api/client'
 
 export async function signInWithGoogle(next?: string) {
   const supabase = await createClient()
-  const origin = (await headers()).get('origin')
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get('origin')
   const callbackUrl = next
     ? `${origin}/api/auth/callback?next=${encodeURIComponent(next)}`
     : `${origin}/api/auth/callback`
@@ -30,7 +30,7 @@ export async function signInWithGoogle(next?: string) {
 
 export async function signInWithApple(next?: string) {
   const supabase = await createClient()
-  const origin = (await headers()).get('origin')
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get('origin')
   const callbackUrl = next
     ? `${origin}/api/auth/callback?next=${encodeURIComponent(next)}`
     : `${origin}/api/auth/callback`
@@ -76,7 +76,7 @@ export async function signInWithEmail(email: string, password: string, next?: st
 
 export async function signUpWithEmail(email: string, password: string, next?: string) {
   const supabase = await createClient()
-  const origin = (await headers()).get('origin')
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get('origin')
 
   const { error } = await supabase.auth.signUp({
     email,

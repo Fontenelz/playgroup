@@ -63,3 +63,5 @@ services:
         value: https://playgroup-api.onrender.com
       - key: API_URL
         value: https://playgroup-api.onrender.com
+      - key: NEXT_PUBLIC_SITE_URL
+        value: https://playgroup-web.onrender.com

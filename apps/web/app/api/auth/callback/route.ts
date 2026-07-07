@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server'
 import { api } from '@/lib/api/client'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams, origin: requestOrigin } = new URL(request.url)
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? requestOrigin
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/'
 
