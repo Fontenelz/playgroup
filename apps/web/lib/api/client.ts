@@ -1,5 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 
+if (!process.env.API_URL && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'API_URL não está configurada. Defina a env var apontando para a URL pública da API.',
+  )
+}
+
 const API_URL = process.env.API_URL ?? 'http://localhost:3333'
 
 export class ApiError extends Error {
