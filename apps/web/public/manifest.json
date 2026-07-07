@@ -1,0 +1,10 @@
+{
+  "name": "PlayGroup",
+  "short_name": "PlayGroup",
+  "description": "Confirme presenças, gerencie pagamentos, sorteie times e acompanhe rankings no seu grupo esportivo.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "pt-BR"
+}
