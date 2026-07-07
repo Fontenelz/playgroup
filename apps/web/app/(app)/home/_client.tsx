@@ -240,7 +240,7 @@ export default function HomeClient({ user, groups, events, notifications, unread
           ))}
 
           {/* Add group */}
-          <Link href="/groups/create">
+          <Link href="/create/group">
             <div className="flex-shrink-0 w-44 h-full min-h-[140px] border border-dashed border-slate-700 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary-500/50 hover:bg-primary-500/5 transition-all">
               <div className="size-10 rounded-xl bg-slate-800 flex items-center justify-center">
                 <Plus className="size-5 text-slate-400" />

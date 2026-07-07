@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose'
+import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose'
 
 export interface SupabaseUser {
   id: string
@@ -15,8 +15,16 @@ export class SupabaseJwtService {
 
   constructor(private readonly config: ConfigService) {
     const jwksUrl = this.config.getOrThrow<string>('SUPABASE_JWKS_URL')
-    this.issuer = `${this.config.getOrThrow<string>('SUPABASE_URL')}/auth/v1`
-    this.jwks = createRemoteJWKSet(new URL(jwksUrl))
+    const supabaseUrl = this.config.getOrThrow<string>('SUPABASE_URL')
+    this.issuer = `${supabaseUrl}/auth/v1`
+
+    try {
+      this.jwks = createRemoteJWKSet(new URL(jwksUrl))
+    } catch {
+      throw new Error(
+        `SUPABASE_JWKS_URL inválida: "${jwksUrl}". Configure a URL completa, ex: https://<projeto>.supabase.co/auth/v1/.well-known/jwks.json`,
+      )
+    }
   }
 
   async verify(token: string): Promise<SupabaseUser> {
