@@ -2,6 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { AuthzService } from '../common/authz.service'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 @Injectable()
 export class GuestEventsService {
   constructor(
@@ -10,6 +12,8 @@ export class GuestEventsService {
   ) {}
 
   async preview(eventId: string, userId: string | undefined) {
+    if (!UUID_RE.test(eventId)) return { status_code: 'not_found' as const }
+
     const event = await this.prisma.event.findUnique({ where: { id: eventId } })
     if (!event) return { status_code: 'not_found' as const }
 
@@ -71,6 +75,8 @@ export class GuestEventsService {
   }
 
   async confirmAsGuest(eventId: string, userId: string, name: string | undefined) {
+    if (!UUID_RE.test(eventId)) throw new BadRequestException('Evento não encontrado')
+
     const event = await this.prisma.event.findUnique({ where: { id: eventId } })
     if (!event) throw new BadRequestException('Evento não encontrado')
 

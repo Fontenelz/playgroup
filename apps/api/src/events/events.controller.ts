@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common'
 import { IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString } from 'class-validator'
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
@@ -93,7 +93,7 @@ export class EventsController {
   @Post('groups/:groupId/events')
   create(
     @CurrentUser() user: SupabaseUser,
-    @Param('groupId') groupId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() dto: CreateEventDto,
   ) {
     return this.events.create(groupId, user.id, dto)
@@ -121,18 +121,18 @@ export class EventsController {
   }
 
   @Get('events/:eventId')
-  detail(@CurrentUser() user: SupabaseUser, @Param('eventId') eventId: string) {
+  detail(@CurrentUser() user: SupabaseUser, @Param('eventId', ParseUUIDPipe) eventId: string) {
     return this.events.detail(eventId, user.id)
   }
 
   @Post('events/:eventId/participation/confirm')
-  async confirm(@CurrentUser() user: SupabaseUser, @Param('eventId') eventId: string) {
+  async confirm(@CurrentUser() user: SupabaseUser, @Param('eventId', ParseUUIDPipe) eventId: string) {
     await this.events.confirmParticipation(eventId, user.id)
     return {}
   }
 
   @Post('events/:eventId/participation/decline')
-  async decline(@CurrentUser() user: SupabaseUser, @Param('eventId') eventId: string) {
+  async decline(@CurrentUser() user: SupabaseUser, @Param('eventId', ParseUUIDPipe) eventId: string) {
     await this.events.declineParticipation(eventId, user.id)
     return {}
   }
@@ -140,8 +140,8 @@ export class EventsController {
   @Post('events/:eventId/participants/:participantUserId/approve')
   approveParticipant(
     @CurrentUser() user: SupabaseUser,
-    @Param('eventId') eventId: string,
-    @Param('participantUserId') participantUserId: string,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+    @Param('participantUserId', ParseUUIDPipe) participantUserId: string,
   ) {
     return this.events.approveParticipant(eventId, participantUserId, user.id)
   }
@@ -149,19 +149,19 @@ export class EventsController {
   @Post('events/:eventId/participants/:participantUserId/reject')
   rejectParticipant(
     @CurrentUser() user: SupabaseUser,
-    @Param('eventId') eventId: string,
-    @Param('participantUserId') participantUserId: string,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+    @Param('participantUserId', ParseUUIDPipe) participantUserId: string,
   ) {
     return this.events.rejectParticipant(eventId, participantUserId, user.id)
   }
 
   @Get('events/:eventId/finance')
-  finance(@CurrentUser() user: SupabaseUser, @Param('eventId') eventId: string) {
+  finance(@CurrentUser() user: SupabaseUser, @Param('eventId', ParseUUIDPipe) eventId: string) {
     return this.events.financeData(eventId, user.id)
   }
 
   @Get('events/:eventId/draw')
-  draw(@CurrentUser() user: SupabaseUser, @Param('eventId') eventId: string) {
+  draw(@CurrentUser() user: SupabaseUser, @Param('eventId', ParseUUIDPipe) eventId: string) {
     return this.events.drawData(eventId, user.id)
   }
 }

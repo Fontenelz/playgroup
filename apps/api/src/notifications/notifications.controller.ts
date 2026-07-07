@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { Controller, Delete, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
@@ -15,7 +15,7 @@ export class NotificationsController {
   }
 
   @Post(':id/read')
-  async markRead(@CurrentUser() user: SupabaseUser, @Param('id') id: string) {
+  async markRead(@CurrentUser() user: SupabaseUser, @Param('id', ParseUUIDPipe) id: string) {
     await this.notifications.markRead(id, user.id)
     return {}
   }
@@ -27,7 +27,7 @@ export class NotificationsController {
   }
 
   @Delete(':id')
-  async remove(@CurrentUser() user: SupabaseUser, @Param('id') id: string) {
+  async remove(@CurrentUser() user: SupabaseUser, @Param('id', ParseUUIDPipe) id: string) {
     await this.notifications.remove(id, user.id)
     return {}
   }

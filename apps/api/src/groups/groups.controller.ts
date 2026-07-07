@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { IsIn, IsInt, IsOptional, IsPositive, IsString, MaxLength, Min } from 'class-validator'
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
@@ -55,17 +55,17 @@ export class GroupsController {
   }
 
   @Get('groups/:groupId')
-  detail(@CurrentUser() user: SupabaseUser, @Param('groupId') groupId: string) {
+  detail(@CurrentUser() user: SupabaseUser, @Param('groupId', ParseUUIDPipe) groupId: string) {
     return this.groups.getDetail(groupId, user.id)
   }
 
   @Get('groups/:groupId/basic')
-  basic(@CurrentUser() user: SupabaseUser, @Param('groupId') groupId: string) {
+  basic(@CurrentUser() user: SupabaseUser, @Param('groupId', ParseUUIDPipe) groupId: string) {
     return this.groups.getBasic(groupId, user.id)
   }
 
   @Post('groups/:groupId/invite-codes')
-  createInvite(@CurrentUser() user: SupabaseUser, @Param('groupId') groupId: string) {
+  createInvite(@CurrentUser() user: SupabaseUser, @Param('groupId', ParseUUIDPipe) groupId: string) {
     return this.groups.createInviteCode(groupId, user.id)
   }
 }
