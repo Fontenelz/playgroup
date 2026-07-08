@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
+import type { ConfigService } from '@nestjs/config'
 import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose'
 
 export interface SupabaseUser {

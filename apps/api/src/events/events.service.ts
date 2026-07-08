@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
-import { PrismaService } from '../prisma/prisma.service'
-import { AuthzService } from '../common/authz.service'
-import { SPORT_LABELS } from '../common/sports'
 import type { Prisma } from '../../generated/prisma'
+import type { AuthzService } from '../common/authz.service'
+import { SPORT_LABELS } from '../common/sports'
+import type { PrismaService } from '../prisma/prisma.service'
 
 export interface CreateEventDto {
   date: string
@@ -42,7 +42,10 @@ export class EventsService {
   async create(groupId: string, userId: string, input: CreateEventDto) {
     await this.authz.assertGroupOrganizer(groupId, userId)
 
-    const group = await this.prisma.group.findUnique({ where: { id: groupId }, select: { sport: true } })
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { sport: true },
+    })
     if (!group) throw new NotFoundException('Grupo não encontrado')
 
     const sportLabel = SPORT_LABELS[group.sport] ?? group.sport
@@ -60,7 +63,8 @@ export class EventsService {
     const isRecurring = input.recurrence !== 'none'
     let recurrenceRule: string | null = null
     if (isRecurring) {
-      const freq = input.recurrence === 'biweekly' ? 'WEEKLY;INTERVAL=2' : input.recurrence.toUpperCase()
+      const freq =
+        input.recurrence === 'biweekly' ? 'WEEKLY;INTERVAL=2' : input.recurrence.toUpperCase()
       const byday =
         (input.recurrence === 'weekly' || input.recurrence === 'biweekly') && input.weekDays.length
           ? `;BYDAY=${input.weekDays.join(',')}`
@@ -148,7 +152,10 @@ export class EventsService {
     if (event.groupId) {
       const membership = await this.prisma.groupMember.findFirst({
         where: { groupId: event.groupId, userId, status: 'active' },
-        select: { role: true, group: { select: { id: true, name: true, sport: true, perEventFee: true } } },
+        select: {
+          role: true,
+          group: { select: { id: true, name: true, sport: true, perEventFee: true } },
+        },
       })
       if (!membership) throw new NotFoundException('Evento não encontrado')
 
@@ -163,7 +170,10 @@ export class EventsService {
 
     const [participantsRaw, myParticipation] = await Promise.all([
       this.prisma.eventParticipant.findMany({
-        where: { eventId, status: { in: ['confirmed', 'pending', 'present', 'absent', 'declined'] } },
+        where: {
+          eventId,
+          status: { in: ['confirmed', 'pending', 'present', 'absent', 'declined'] },
+        },
         orderBy: { confirmedAt: 'asc' },
         select: {
           id: true,
@@ -175,7 +185,10 @@ export class EventsService {
           user: { select: { id: true, name: true, nickname: true, avatarUrl: true } },
         },
       }),
-      this.prisma.eventParticipant.findFirst({ where: { eventId, userId }, select: { status: true } }),
+      this.prisma.eventParticipant.findFirst({
+        where: { eventId, userId },
+        select: { status: true },
+      }),
     ])
 
     const toItem = (p: (typeof participantsRaw)[number]) => ({
@@ -189,12 +202,14 @@ export class EventsService {
     })
 
     const participants = participantsRaw.filter((p) => p.status !== 'declined').map(toItem)
-    const waitlist = participantsRaw.filter((p) => p.status === 'pending').map((p) => ({
-      id: p.id,
-      user_id: p.userId,
-      user: p.user,
-      confirmed_at: p.confirmedAt,
-    }))
+    const waitlist = participantsRaw
+      .filter((p) => p.status === 'pending')
+      .map((p) => ({
+        id: p.id,
+        user_id: p.userId,
+        user: p.user,
+        confirmed_at: p.confirmedAt,
+      }))
     const declinedParticipants = participantsRaw.filter((p) => p.status === 'declined').map(toItem)
 
     return {
@@ -226,7 +241,13 @@ export class EventsService {
   async confirmParticipation(eventId: string, userId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, groupId: true, visibility: true, maxParticipants: true, participantCount: true },
+      select: {
+        id: true,
+        groupId: true,
+        visibility: true,
+        maxParticipants: true,
+        participantCount: true,
+      },
     })
     if (!event) throw new NotFoundException('Evento não encontrado')
 
@@ -304,11 +325,20 @@ export class EventsService {
   ) {
     if (previousStatus === newStatus) return
     if (newStatus === 'confirmed') {
-      await this.prisma.event.update({ where: { id: eventId }, data: { participantCount: { increment: 1 } } })
+      await this.prisma.event.update({
+        where: { id: eventId },
+        data: { participantCount: { increment: 1 } },
+      })
     } else if (previousStatus === 'confirmed') {
-      const event = await this.prisma.event.findUnique({ where: { id: eventId }, select: { participantCount: true } })
+      const event = await this.prisma.event.findUnique({
+        where: { id: eventId },
+        select: { participantCount: true },
+      })
       if (event && event.participantCount > 0) {
-        await this.prisma.event.update({ where: { id: eventId }, data: { participantCount: { decrement: 1 } } })
+        await this.prisma.event.update({
+          where: { id: eventId },
+          data: { participantCount: { decrement: 1 } },
+        })
       }
     }
   }
@@ -316,7 +346,13 @@ export class EventsService {
   async financeData(eventId: string, userId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, title: true, eventFee: true, groupId: true, group: { select: { perEventFee: true } } },
+      select: {
+        id: true,
+        title: true,
+        eventFee: true,
+        groupId: true,
+        group: { select: { perEventFee: true } },
+      },
     })
     if (!event) throw new NotFoundException('Evento não encontrado')
     if (!event.groupId) throw new NotFoundException('Este evento não possui financeiro')
@@ -359,7 +395,9 @@ export class EventsService {
       where: { eventId, status: 'confirmed' },
       select: {
         userId: true,
-        user: { select: { id: true, name: true, nickname: true, avatarUrl: true, skillLevel: true } },
+        user: {
+          select: { id: true, name: true, nickname: true, avatarUrl: true, skillLevel: true },
+        },
       },
     })
 
@@ -375,10 +413,7 @@ export class EventsService {
     }
   }
 
-  async discoverPublic(
-    userId: string,
-    query: { page?: number; take?: number; sport?: string },
-  ) {
+  async discoverPublic(userId: string, query: { page?: number; take?: number; sport?: string }) {
     const take = Math.min(Math.max(query.take ?? 20, 1), 50)
     const page = Math.max(query.page ?? 1, 1)
     const skip = (page - 1) * take

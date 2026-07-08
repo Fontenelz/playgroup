@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
-import { PrismaService } from '../prisma/prisma.service'
-import { AuthzService } from '../common/authz.service'
+import type { AuthzService } from '../common/authz.service'
+import type { PrismaService } from '../prisma/prisma.service'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -130,7 +130,10 @@ export class GuestEventsService {
     })
 
     if (before?.status !== 'confirmed' && status === 'confirmed') {
-      await this.prisma.event.update({ where: { id: eventId }, data: { participantCount: { increment: 1 } } })
+      await this.prisma.event.update({
+        where: { id: eventId },
+        data: { participantCount: { increment: 1 } },
+      })
     }
 
     // Retornar um objeto (não a string pura) — Nest/Express só serializa em
@@ -139,4 +142,3 @@ export class GuestEventsService {
     return { status }
   }
 }
-

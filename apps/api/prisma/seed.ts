@@ -158,14 +158,73 @@ async function seedGroupMembers() {
     monthlySlot?: boolean
     skillRating?: number
   }> = [
-    { groupId: groups.pelada, userId: users.matheus, role: 'admin', memberType: 'monthly', status: 'active', monthlySlot: true, skillRating: 5 },
-    { groupId: groups.pelada, userId: users.ana, role: 'participant', memberType: 'regular', status: 'active', skillRating: 3 },
-    { groupId: groups.pelada, userId: users.bruno, role: 'organizer', memberType: 'monthly', status: 'active', monthlySlot: true, skillRating: 5 },
-    { groupId: groups.pelada, userId: users.diego, role: 'participant', memberType: 'regular', status: 'active', skillRating: 3 },
-    { groupId: groups.pelada, userId: users.elisa, role: 'participant', memberType: 'guest', status: 'pending', skillRating: 2 },
-    { groupId: groups.volei, userId: users.carla, role: 'admin', memberType: 'monthly', status: 'active', monthlySlot: true, skillRating: 4 },
-    { groupId: groups.volei, userId: users.ana, role: 'participant', memberType: 'regular', status: 'active', skillRating: 3 },
-    { groupId: groups.volei, userId: users.diego, role: 'participant', memberType: 'regular', status: 'active', skillRating: 3 },
+    {
+      groupId: groups.pelada,
+      userId: users.matheus,
+      role: 'admin',
+      memberType: 'monthly',
+      status: 'active',
+      monthlySlot: true,
+      skillRating: 5,
+    },
+    {
+      groupId: groups.pelada,
+      userId: users.ana,
+      role: 'participant',
+      memberType: 'regular',
+      status: 'active',
+      skillRating: 3,
+    },
+    {
+      groupId: groups.pelada,
+      userId: users.bruno,
+      role: 'organizer',
+      memberType: 'monthly',
+      status: 'active',
+      monthlySlot: true,
+      skillRating: 5,
+    },
+    {
+      groupId: groups.pelada,
+      userId: users.diego,
+      role: 'participant',
+      memberType: 'regular',
+      status: 'active',
+      skillRating: 3,
+    },
+    {
+      groupId: groups.pelada,
+      userId: users.elisa,
+      role: 'participant',
+      memberType: 'guest',
+      status: 'pending',
+      skillRating: 2,
+    },
+    {
+      groupId: groups.volei,
+      userId: users.carla,
+      role: 'admin',
+      memberType: 'monthly',
+      status: 'active',
+      monthlySlot: true,
+      skillRating: 4,
+    },
+    {
+      groupId: groups.volei,
+      userId: users.ana,
+      role: 'participant',
+      memberType: 'regular',
+      status: 'active',
+      skillRating: 3,
+    },
+    {
+      groupId: groups.volei,
+      userId: users.diego,
+      role: 'participant',
+      memberType: 'regular',
+      status: 'active',
+      skillRating: 3,
+    },
   ]
 
   for (const member of members) {
@@ -311,20 +370,78 @@ async function seedEventParticipants() {
     assists?: number
     isLateCancel?: boolean
   }> = [
-    { eventId: events.peladaPassada, userId: users.matheus, status: 'present', isMonthly: true, confirmedAt: daysFromNow(-8), goals: 2, assists: 1 },
-    { eventId: events.peladaPassada, userId: users.bruno, status: 'present', isMonthly: true, confirmedAt: daysFromNow(-8), goals: 3, assists: 0 },
-    { eventId: events.peladaPassada, userId: users.ana, status: 'present', confirmedAt: daysFromNow(-8), goals: 0, assists: 2 },
-    { eventId: events.peladaPassada, userId: users.diego, status: 'absent', confirmedAt: daysFromNow(-8), isLateCancel: true },
+    {
+      eventId: events.peladaPassada,
+      userId: users.matheus,
+      status: 'present',
+      isMonthly: true,
+      confirmedAt: daysFromNow(-8),
+      goals: 2,
+      assists: 1,
+    },
+    {
+      eventId: events.peladaPassada,
+      userId: users.bruno,
+      status: 'present',
+      isMonthly: true,
+      confirmedAt: daysFromNow(-8),
+      goals: 3,
+      assists: 0,
+    },
+    {
+      eventId: events.peladaPassada,
+      userId: users.ana,
+      status: 'present',
+      confirmedAt: daysFromNow(-8),
+      goals: 0,
+      assists: 2,
+    },
+    {
+      eventId: events.peladaPassada,
+      userId: users.diego,
+      status: 'absent',
+      confirmedAt: daysFromNow(-8),
+      isLateCancel: true,
+    },
 
-    { eventId: events.peladaAberta, userId: users.matheus, status: 'confirmed', isMonthly: true, confirmedAt: now },
-    { eventId: events.peladaAberta, userId: users.bruno, status: 'confirmed', isMonthly: true, confirmedAt: now },
+    {
+      eventId: events.peladaAberta,
+      userId: users.matheus,
+      status: 'confirmed',
+      isMonthly: true,
+      confirmedAt: now,
+    },
+    {
+      eventId: events.peladaAberta,
+      userId: users.bruno,
+      status: 'confirmed',
+      isMonthly: true,
+      confirmedAt: now,
+    },
     { eventId: events.peladaAberta, userId: users.ana, status: 'confirmed', confirmedAt: now },
 
-    { eventId: events.voleiPublicado, userId: users.carla, status: 'confirmed', isMonthly: true, confirmedAt: now },
+    {
+      eventId: events.voleiPublicado,
+      userId: users.carla,
+      status: 'confirmed',
+      isMonthly: true,
+      confirmedAt: now,
+    },
     { eventId: events.voleiPublicado, userId: users.diego, status: 'pending' },
 
-    { eventId: events.voleiPassado, userId: users.carla, status: 'present', isMonthly: true, confirmedAt: daysFromNow(-5) },
-    { eventId: events.voleiPassado, userId: users.ana, status: 'present', confirmedAt: daysFromNow(-5) },
+    {
+      eventId: events.voleiPassado,
+      userId: users.carla,
+      status: 'present',
+      isMonthly: true,
+      confirmedAt: daysFromNow(-5),
+    },
+    {
+      eventId: events.voleiPassado,
+      userId: users.ana,
+      status: 'present',
+      confirmedAt: daysFromNow(-5),
+    },
   ]
 
   for (const participant of participants) {

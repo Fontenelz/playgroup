@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
-import { PrismaService } from '../prisma/prisma.service'
-import { AuthzService } from '../common/authz.service'
+import type { AuthzService } from '../common/authz.service'
+import type { PrismaService } from '../prisma/prisma.service'
 
 @Injectable()
 export class InvitesService {
@@ -67,7 +67,12 @@ export class InvitesService {
       members: members.map((m) => ({
         id: m.id,
         role: m.role,
-        user: { id: m.userId, name: m.user.name, nickname: m.user.nickname, avatar_url: m.user.avatarUrl },
+        user: {
+          id: m.userId,
+          name: m.user.name,
+          nickname: m.user.nickname,
+          avatar_url: m.user.avatarUrl,
+        },
       })),
     }
   }
@@ -89,7 +94,13 @@ export class InvitesService {
       if (existing) throw new BadRequestException('Você já é membro deste grupo')
 
       await tx.groupMember.create({
-        data: { groupId: invite.groupId, userId, role: 'participant', memberType: 'regular', status: 'active' },
+        data: {
+          groupId: invite.groupId,
+          userId,
+          role: 'participant',
+          memberType: 'regular',
+          status: 'active',
+        },
       })
       await tx.inviteCode.update({ where: { id: invite.id }, data: { uses: { increment: 1 } } })
 

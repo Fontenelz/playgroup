@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Patch, Put, UseGuards } from '@nestjs/common'
 import { IsArray, IsOptional, IsString } from 'class-validator'
-import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
-import { UsersService } from './users.service'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import type { UsersService } from './users.service'
 
 class SaveProfileDto {
   @IsString()

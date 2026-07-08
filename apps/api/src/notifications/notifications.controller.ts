@@ -1,8 +1,8 @@
 import { Controller, Delete, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
-import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
-import { NotificationsService } from './notifications.service'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import type { NotificationsService } from './notifications.service'
 
 @UseGuards(SupabaseJwtGuard)
 @Controller('notifications')

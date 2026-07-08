@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common'
 import { IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString } from 'class-validator'
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
-import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
-import { EventsService } from './events.service'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import type { EventsService } from './events.service'
 
 class CreateEventDto {
   @IsString()
@@ -126,13 +126,19 @@ export class EventsController {
   }
 
   @Post('events/:eventId/participation/confirm')
-  async confirm(@CurrentUser() user: SupabaseUser, @Param('eventId', ParseUUIDPipe) eventId: string) {
+  async confirm(
+    @CurrentUser() user: SupabaseUser,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+  ) {
     await this.events.confirmParticipation(eventId, user.id)
     return {}
   }
 
   @Post('events/:eventId/participation/decline')
-  async decline(@CurrentUser() user: SupabaseUser, @Param('eventId', ParseUUIDPipe) eventId: string) {
+  async decline(
+    @CurrentUser() user: SupabaseUser,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+  ) {
     await this.events.declineParticipation(eventId, user.id)
     return {}
   }

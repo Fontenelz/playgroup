@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 import { IsIn, IsInt, IsOptional, IsPositive, IsString, MaxLength, Min } from 'class-validator'
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
-import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
-import { GroupsService } from './groups.service'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import type { GroupsService } from './groups.service'
 
 class CreateGroupDto {
   @IsString()
@@ -65,7 +65,10 @@ export class GroupsController {
   }
 
   @Post('groups/:groupId/invite-codes')
-  createInvite(@CurrentUser() user: SupabaseUser, @Param('groupId', ParseUUIDPipe) groupId: string) {
+  createInvite(
+    @CurrentUser() user: SupabaseUser,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+  ) {
     return this.groups.createInviteCode(groupId, user.id)
   }
 }

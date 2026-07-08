@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
-import { CurrentUser } from '../common/decorators/current-user.decorator'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
-import { InvitesService } from './invites.service'
+import { CurrentUser } from '../common/decorators/current-user.decorator'
+import type { InvitesService } from './invites.service'
 
 @UseGuards(SupabaseJwtGuard)
 @Controller('invites')
