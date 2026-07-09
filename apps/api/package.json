@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nest start --watch",
-    "build": "prisma generate && nest build",
+    "build": "prisma generate && prisma migrate deploy && nest build",
     "start": "node dist/main.js",
     "lint": "biome check src",
     "prisma:generate": "prisma generate",
