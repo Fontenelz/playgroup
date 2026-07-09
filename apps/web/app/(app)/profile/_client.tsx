@@ -36,8 +36,6 @@ export default function ProfileClient({
 }: ProfileClientProps) {
   const [isPending, startTransition] = useTransition()
 
-  const displayNickname = nickname ?? name.split(' ')[0]
-
   const stats = [
     { label: 'Presenças',   value: presences },
     { label: 'Grupos',      value: groupCount },
@@ -70,6 +68,7 @@ export default function ProfileClient({
           <Avatar name={name} src={avatar_url ?? undefined} size="xl" />
           <div className="text-center">
             <h2 className="text-xl font-bold text-slate-100">{name}</h2>
+            {nickname && <p className="text-sm text-slate-500">@{nickname}</p>}
             {city && <p className="text-sm text-slate-400 mt-0.5">{city}</p>}
             <div className="flex items-center justify-center gap-1.5 mt-2 flex-wrap">
               {sports.map((s) => (

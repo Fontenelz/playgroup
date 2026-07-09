@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PlayGroup
 
-## Getting Started
+App para organizar peladas e grupos esportivos: grupos, eventos recorrentes (ou avulsos), confirmação de presença, cobrança de mensalistas/avulsos, sorteio de times e ranking de presença.
 
-First, run the development server:
+Monorepo pnpm + Turborepo, dois apps:
+
+- **`apps/web`** — Next.js 16 (App Router) + React 19 + Tailwind v4
+- **`apps/api`** — NestJS 11 + Prisma 6
+
+Auth é feito pelo Supabase; o banco de dados da aplicação é um Postgres próprio (Neon em produção, Docker local em dev) — não é o mesmo Postgres do Supabase.
+
+Para o guia técnico completo (módulos da API, autenticação/autorização, convenções de código, rotas, deploy) ver [`AGENTS.md`](./AGENTS.md).
+
+## Rodando localmente
+
+Requisitos: Node 22+, `pnpm@10.15.1`, Docker (para o Postgres local).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm db:up                              # sobe o Postgres local (docker compose, porta 5433)
+cd apps/api && pnpm prisma:migrate      # aplica as migrations
+cd ../.. && pnpm db:seed                # opcional: popula dados de exemplo
+pnpm dev                                # sobe web (:3000) e api (:3333) em paralelo
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Cada app precisa de variáveis de ambiente próprias (`apps/api/.env`, `apps/web/.env.local`) — não há `.env.example` versionado ainda; ver a lista de variáveis nas seções 2 e 3 do `AGENTS.md`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Estrutura
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+apps/
+  web/       Next.js 16 (App Router) — UI e client-side
+  api/       NestJS 11 + Prisma 6 — backend de dados
+supabase/    config do Supabase CLI (Auth) + schema SQL legado (histórico)
+```
 
-## Learn More
+## Scripts (raiz)
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm dev        # turbo run dev — web + api em paralelo, watch mode
+pnpm build      # turbo run build
+pnpm lint       # biome check . (cobre apps/api)
+pnpm format     # biome format --write .
+pnpm db:up      # sobe o Postgres local (docker compose)
+pnpm db:down    # derruba o Postgres local
+pnpm db:studio  # prisma studio
+pnpm db:seed    # popula dados de exemplo
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`apps/web` tem seu próprio lint (`pnpm --filter web lint`, ESLint/Next).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Produção roda na **Vercel** (web + api) com banco **Neon** (Postgres) e **Supabase** (Auth). Detalhes de configuração, variáveis de ambiente e o cuidado com pooled/direct connection do Neon estão na seção 5 do `AGENTS.md`.

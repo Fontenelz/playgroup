@@ -143,7 +143,8 @@ export default function SortearClient({ eventTitle, confirmedParticipants }: Sor
   function toggleCollapse(teamIdx: number) {
     setCollapsedTeams((prev) => {
       const next = new Set(prev)
-      next.has(teamIdx) ? next.delete(teamIdx) : next.add(teamIdx)
+      if (next.has(teamIdx)) next.delete(teamIdx)
+      else next.add(teamIdx)
       return next
     })
   }

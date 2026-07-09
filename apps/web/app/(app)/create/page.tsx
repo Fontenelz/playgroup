@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
-import { Users, Calendar, LinkIcon, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 export default function CreatePage() {
   const router = useRouter()

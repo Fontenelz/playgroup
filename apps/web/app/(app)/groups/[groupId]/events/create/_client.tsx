@@ -4,14 +4,13 @@ import { useState, useCallback, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { ChevronLeft, Calendar, Clock, MapPin, Users, Star, RefreshCw, DollarSign, FileText, ChevronRight, Check } from 'lucide-react'
+import { ChevronLeft, Calendar, Clock, MapPin, Star, RefreshCw, DollarSign, FileText, ChevronRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { NumberStepper } from '@/components/ui/NumberStepper'
 import { SelectCardGroup } from '@/components/ui/SelectCard'
 import { StepBar } from '@/components/ui/StepBar'
 import { SportIcon } from '@/components/shared/SportIcon'
-import { SPORT_MAP } from '@/lib/constants'
 import { formatCurrency, cn } from '@/lib/utils'
 import { createEvent } from '@/lib/actions/events'
 
@@ -105,7 +104,6 @@ function formatDatePretty(dateStr: string): string {
 export function CreateEventClient({ group }: { group: GroupData }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const sport = SPORT_MAP[group.sport as keyof typeof SPORT_MAP] ?? SPORT_MAP['other']
 
   const [step, setStep] = useState(1)
   const [dir, setDir]   = useState(1)

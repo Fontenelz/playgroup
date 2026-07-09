@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { SportIcon } from '@/components/shared/SportIcon'
-import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, cn } from '@/lib/utils'
 import { confirmParticipation, declineParticipation } from '@/lib/actions/events'
@@ -131,7 +130,6 @@ export default function HomeClient({ user, groups, events, notifications, unread
           <div className="space-y-3">
             {events.map((event, i) => {
               const status = eventStatuses[event.id] ?? null
-              const sport = SPORT_MAP[event.sport as SportId]
               const slots = event.max_participants - event.participant_count
               const date = formatDate(event.starts_at, { weekday: 'short', day: '2-digit', month: '2-digit' })
               const time = formatTime(event.starts_at)
