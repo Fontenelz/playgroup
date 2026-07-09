@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Settings, Share2, Star, ChevronRight, Copy, Check, Link2 } from 'lucide-react'
@@ -472,9 +472,11 @@ function InviteSheet({ groupId, isOpen, onClose }: { groupId: string; isOpen: bo
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
-    if (!isOpen) { setCode(null); setCopied(false) }
-  }, [isOpen])
+  function handleClose() {
+    setCode(null)
+    setCopied(false)
+    onClose()
+  }
 
   const inviteUrl = code ? `${typeof window !== 'undefined' ? window.location.origin : ''}/join/${code}` : null
 
@@ -508,7 +510,7 @@ function InviteSheet({ groupId, isOpen, onClose }: { groupId: string; isOpen: bo
   }
 
   return (
-    <BottomSheet isOpen={isOpen} onClose={onClose} title="Convidar para o grupo">
+    <BottomSheet isOpen={isOpen} onClose={handleClose} title="Convidar para o grupo">
       <div className="space-y-4 pb-2">
         {!code ? (
           <>

@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { Star, Clock } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
@@ -84,22 +87,36 @@ interface WaitlistRowProps {
 }
 
 export function WaitlistRow({ position, name, avatarUrl, joinedAt, status, expiresAt, isMe }: WaitlistRowProps) {
-  const waitingTime = (() => {
-    const diff = Date.now() - new Date(joinedAt).getTime()
-    const h = Math.floor(diff / 3600000)
-    const m = Math.floor((diff % 3600000) / 60000)
-    if (h > 0) return `${h}h na fila`
-    return `${m}min na fila`
-  })()
+  // `now` só é lido a partir do efeito (nunca durante o render) pra manter o
+  // componente puro; o intervalo mantém o "tempo na fila"/countdown vivos.
+  const [now, setNow] = useState<number | null>(null)
 
-  const timeLeft = (() => {
-    if (!expiresAt || status !== 'notified') return null
-    const diff = new Date(expiresAt).getTime() - Date.now()
-    if (diff <= 0) return 'Expirado'
-    const m = Math.floor(diff / 60000)
-    const s = Math.floor((diff % 60000) / 1000)
-    return `${m}:${String(s).padStart(2, '0')} restantes`
-  })()
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const waitingTime =
+    now === null
+      ? null
+      : (() => {
+          const diff = now - new Date(joinedAt).getTime()
+          const h = Math.floor(diff / 3600000)
+          const m = Math.floor((diff % 3600000) / 60000)
+          if (h > 0) return `${h}h na fila`
+          return `${m}min na fila`
+        })()
+
+  const timeLeft =
+    now === null || !expiresAt || status !== 'notified'
+      ? null
+      : (() => {
+          const diff = new Date(expiresAt).getTime() - now
+          if (diff <= 0) return 'Expirado'
+          const m = Math.floor(diff / 60000)
+          const s = Math.floor((diff % 60000) / 1000)
+          return `${m}:${String(s).padStart(2, '0')} restantes`
+        })()
 
   return (
     <div className={cn(

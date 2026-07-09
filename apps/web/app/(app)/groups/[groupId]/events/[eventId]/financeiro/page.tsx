@@ -16,18 +16,20 @@ export default async function FinanceiroPage({
 }) {
   const { groupId, eventId } = await params
 
+  let data: FinanceResponse
   try {
-    const data = await api.get<FinanceResponse>(`/events/${eventId}/finance`)
-    return (
-      <FinanceiroClient
-        eventTitle={data.eventTitle}
-        fee={data.fee}
-        participants={data.participants}
-      />
-    )
+    data = await api.get<FinanceResponse>(`/events/${eventId}/finance`)
   } catch (err) {
     if (err instanceof ApiError && err.status === 403) redirect(`/groups/${groupId}/events/${eventId}`)
     if (err instanceof ApiError && err.status === 404) notFound()
     throw err
   }
+
+  return (
+    <FinanceiroClient
+      eventTitle={data.eventTitle}
+      fee={data.fee}
+      participants={data.participants}
+    />
+  )
 }

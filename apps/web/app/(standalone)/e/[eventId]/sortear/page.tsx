@@ -15,17 +15,19 @@ export default async function StandaloneSortearPage({
 }) {
   const { eventId } = await params
 
+  let data: DrawResponse
   try {
-    const data = await api.get<DrawResponse>(`/events/${eventId}/draw`)
-    return (
-      <SortearClient
-        eventTitle={data.eventTitle}
-        confirmedParticipants={data.confirmedParticipants}
-      />
-    )
+    data = await api.get<DrawResponse>(`/events/${eventId}/draw`)
   } catch (err) {
     if (err instanceof ApiError && err.status === 403) redirect(`/e/${eventId}`)
     if (err instanceof ApiError && err.status === 404) notFound()
     throw err
   }
+
+  return (
+    <SortearClient
+      eventTitle={data.eventTitle}
+      confirmedParticipants={data.confirmedParticipants}
+    />
+  )
 }

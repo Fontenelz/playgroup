@@ -13,7 +13,7 @@ import { useAuthStore } from '@/store/auth.store'
 import { SPORTS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { SportId } from '@/lib/constants'
-import type { SkillLevel } from '@/types/app.types'
+import type { SkillLevel, User } from '@/types/app.types'
 
 const SKILL_OPTIONS: { id: SkillLevel; label: string; description: string }[] = [
   { id: 'beginner',     label: 'Iniciante',     description: 'Estou aprendendo.' },
@@ -23,22 +23,9 @@ const SKILL_OPTIONS: { id: SkillLevel; label: string; description: string }[] = 
 ]
 
 export default function EditProfilePage() {
-  const router       = useRouter()
-  const storeUser    = useAuthStore((s) => s.user)
-  const isLoading    = useAuthStore((s) => s.isLoading)
-  const updateUser   = useAuthStore((s) => s.updateUser)
-
-  // Form state - initialized from store when available
-  const [name,          setName]          = useState('')
-  const [nickname,      setNickname]      = useState('')
-  const [bio,           setBio]           = useState('')
-  const [city,          setCity]          = useState('')
-  const [sports,        setSports]        = useState<SportId[]>([])
-  const [skillLevel,    setSkillLevel]    = useState<SkillLevel>('intermediate')
-  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined)
-  const [initialized,   setInitialized]   = useState(false)
-  const [loading,       setLoading]       = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const router     = useRouter()
+  const storeUser  = useAuthStore((s) => s.user)
+  const isLoading  = useAuthStore((s) => s.isLoading)
 
   // Redirect if not authenticated after loading
   useEffect(() => {
@@ -47,20 +34,6 @@ export default function EditProfilePage() {
     }
   }, [isLoading, storeUser, router])
 
-  // Initialize form when user data is available
-  useEffect(() => {
-    if (storeUser && !initialized) {
-      setName(storeUser.name)
-      setNickname(storeUser.nickname ?? '')
-      setBio(storeUser.bio ?? '')
-      setCity(storeUser.city ?? '')
-      setSports((storeUser.sports ?? []) as SportId[])
-      setSkillLevel(storeUser.skill_level ?? 'intermediate')
-      setAvatarPreview(storeUser.avatar_url ?? undefined)
-      setInitialized(true)
-    }
-  }, [storeUser, initialized])
-
   if (isLoading || !storeUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -68,6 +41,25 @@ export default function EditProfilePage() {
       </div>
     )
   }
+
+  return <EditProfileForm storeUser={storeUser} />
+}
+
+function EditProfileForm({ storeUser }: { storeUser: User }) {
+  const router      = useRouter()
+  const updateUser  = useAuthStore((s) => s.updateUser)
+
+  // Form state, initialized diretamente do usuário já carregado (o gate de
+  // loading no componente pai garante que storeUser existe no primeiro render).
+  const [name,          setName]          = useState(storeUser.name)
+  const [nickname,      setNickname]      = useState(storeUser.nickname ?? '')
+  const [bio,           setBio]           = useState(storeUser.bio ?? '')
+  const [city,          setCity]          = useState(storeUser.city ?? '')
+  const [sports,        setSports]        = useState<SportId[]>((storeUser.sports ?? []) as SportId[])
+  const [skillLevel,    setSkillLevel]    = useState<SkillLevel>(storeUser.skill_level ?? 'intermediate')
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(storeUser.avatar_url ?? undefined)
+  const [loading,       setLoading]       = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   function toggleSport(id: SportId) {
     setSports((prev) =>
