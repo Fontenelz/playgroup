@@ -351,12 +351,15 @@ export class EventsService {
         title: true,
         eventFee: true,
         groupId: true,
+        startsAt: true,
         group: { select: { perEventFee: true } },
       },
     })
     if (!event) throw new NotFoundException('Evento não encontrado')
     if (!event.groupId) throw new NotFoundException('Este evento não possui financeiro')
     await this.authz.assertGroupOrganizer(event.groupId, userId)
+
+    const fee = Number(event.eventFee ?? event.group?.perEventFee ?? 0)
 
     const participants = await this.prisma.eventParticipant.findMany({
       where: { eventId, status: { in: ['confirmed', 'present'] } },
@@ -369,17 +372,48 @@ export class EventsService {
       },
     })
 
+    // Garante que toda cobrança apareça como um Payment real (idempotente via
+    // a unique constraint em [eventId, userId]) — sem isso o financeiro era
+    // só uma lista lida na hora, sem nada persistido pra marcar como pago.
+    const groupId = event.groupId
+    const payments =
+      fee > 0 && participants.length > 0
+        ? await Promise.all(
+            participants.map((p) =>
+              this.prisma.payment.upsert({
+                where: { eventId_userId: { eventId, userId: p.userId } },
+                create: {
+                  groupId,
+                  userId: p.userId,
+                  eventId,
+                  type: 'per_event',
+                  amount: fee,
+                  dueDate: event.startsAt,
+                },
+                update: {},
+                select: { id: true, userId: true, status: true },
+              }),
+            ),
+          )
+        : []
+    const paymentByUser = new Map(payments.map((p) => [p.userId, p]))
+
     return {
       eventTitle: event.title,
-      fee: event.eventFee ?? event.group?.perEventFee ?? 0,
-      participants: participants.map((p) => ({
-        id: p.id,
-        user_id: p.userId,
-        name: p.user.name,
-        nickname: p.user.nickname ?? p.user.name.split(' ')[0],
-        avatar_url: p.user.avatarUrl ?? undefined,
-        is_monthly: p.isMonthly,
-      })),
+      fee,
+      participants: participants.map((p) => {
+        const payment = paymentByUser.get(p.userId)
+        return {
+          id: p.id,
+          user_id: p.userId,
+          name: p.user.name,
+          nickname: p.user.nickname ?? p.user.name.split(' ')[0],
+          avatar_url: p.user.avatarUrl ?? undefined,
+          is_monthly: p.isMonthly,
+          payment_id: payment?.id ?? null,
+          payment_status: payment?.status ?? 'pending',
+        }
+      }),
     }
   }
 

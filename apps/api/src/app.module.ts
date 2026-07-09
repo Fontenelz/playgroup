@@ -9,6 +9,7 @@ import { GroupsModule } from './groups/groups.module'
 import { GuestEventsModule } from './guest-events/guest-events.module'
 import { InvitesModule } from './invites/invites.module'
 import { NotificationsModule } from './notifications/notifications.module'
+import { PaymentsModule } from './payments/payments.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { UsersModule } from './users/users.module'
 
@@ -25,6 +26,7 @@ import { UsersModule } from './users/users.module'
     GuestEventsModule,
     NotificationsModule,
     DashboardModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
 })

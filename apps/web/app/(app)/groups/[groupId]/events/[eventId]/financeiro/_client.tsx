@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -9,11 +9,10 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { markPaymentPaid } from '@/lib/actions/payments'
 import { formatCurrency, cn } from '@/lib/utils'
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
-
-type LocalPaymentStatus = 'paid' | 'pending'
 
 export interface FinanceiroParticipant {
   id: string
@@ -22,6 +21,8 @@ export interface FinanceiroParticipant {
   nickname: string
   avatar_url?: string | null
   is_monthly: boolean
+  payment_id: string | null
+  payment_status: 'pending' | 'paid' | 'overdue' | 'cancelled' | 'refunded'
 }
 
 interface FinanceiroClientProps {
@@ -37,19 +38,16 @@ type FilterTab = 'all' | 'paid' | 'pending'
 export default function FinanceiroClient({ eventTitle, fee, participants }: FinanceiroClientProps) {
   const router = useRouter()
 
-  // Payment state is local only (no payments table in schema)
-  const [paymentStatuses, setPaymentStatuses] = useState<Record<string, LocalPaymentStatus>>(
-    Object.fromEntries(participants.map((p) => [p.id, 'pending'])),
-  )
-
   const [filter, setFilter]         = useState<FilterTab>('all')
   const [confirmSheet, setConfirmSheet] = useState<FinanceiroParticipant | null>(null)
   const [loadingId, setLoadingId]   = useState<string | null>(null)
 
+  const isPaid = (p: FinanceiroParticipant) => p.payment_status === 'paid'
+
   // ── Stats ────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const paid    = participants.filter((p) => paymentStatuses[p.id] === 'paid').length
-    const pending = participants.filter((p) => paymentStatuses[p.id] === 'pending').length
+    const paid    = participants.filter(isPaid).length
+    const pending = participants.length - paid
     const total   = participants.length
 
     return {
@@ -61,24 +59,31 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
       pendingAmount:   pending * fee,
       pct: total > 0 ? Math.round((paid / total) * 100) : 0,
     }
-  }, [participants, paymentStatuses, fee])
+  }, [participants, fee])
 
   const filtered = useMemo(() => {
-    if (filter === 'paid')    return participants.filter((p) => paymentStatuses[p.id] === 'paid')
-    if (filter === 'pending') return participants.filter((p) => paymentStatuses[p.id] === 'pending')
+    if (filter === 'paid')    return participants.filter(isPaid)
+    if (filter === 'pending') return participants.filter((p) => !isPaid(p))
     return participants
-  }, [participants, paymentStatuses, filter])
+  }, [participants, filter])
 
   // ── Actions ──────────────────────────────────────────────────────────────
   async function markAsPaid(p: FinanceiroParticipant) {
+    if (!p.payment_id) return
     setLoadingId(p.id)
-    await new Promise((r) => setTimeout(r, 600))
-    setPaymentStatuses((prev) => ({ ...prev, [p.id]: 'paid' }))
+    const result = await markPaymentPaid(p.payment_id)
     setLoadingId(null)
+    if (result.error) {
+      toast.error(result.error)
+      return
+    }
     setConfirmSheet(null)
     toast.success(`${p.nickname} marcado como pago ✅`)
+    router.refresh()
   }
 
+  // Cobrança (lembrete) ainda não tem canal de envio real (push/SMS/WhatsApp)
+  // — fica só como feedback local por enquanto, não é um bug pendente.
   async function sendReminder(p: FinanceiroParticipant) {
     setLoadingId(p.id)
     await new Promise((r) => setTimeout(r, 800))
@@ -87,7 +92,7 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
   }
 
   async function sendBulkReminder() {
-    const targets = participants.filter((p) => paymentStatuses[p.id] !== 'paid')
+    const targets = participants.filter((p) => !isPaid(p))
     if (targets.length === 0) { toast('Todos já pagaram! 🎉'); return }
     await new Promise((r) => setTimeout(r, 900))
     toast.success(`Cobrança enviada para ${targets.length} participantes 📲`)
@@ -196,7 +201,7 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
         <div className="space-y-2">
           <AnimatePresence mode="popLayout">
             {filtered.map((p) => {
-              const isPaid = paymentStatuses[p.id] === 'paid'
+              const paid = isPaid(p)
               const isLoading = loadingId === p.id
 
               return (
@@ -220,7 +225,7 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      {isPaid ? (
+                      {paid ? (
                         <Badge variant="success" size="sm">
                           <span className="flex items-center gap-1"><Check className="size-3" />Pago</span>
                         </Badge>
@@ -236,7 +241,7 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
                   </div>
 
                   {/* Actions */}
-                  {!isPaid ? (
+                  {!paid ? (
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => sendReminder(p)}
@@ -248,9 +253,9 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
                       </button>
                       <button
                         onClick={() => setConfirmSheet(p)}
-                        disabled={isLoading}
+                        disabled={isLoading || !p.payment_id}
                         className="size-8 rounded-lg bg-primary-500/20 hover:bg-primary-500/30 flex items-center justify-center text-primary-400 hover:text-primary-300 transition-all cursor-pointer disabled:opacity-50"
-                        title="Marcar como pago"
+                        title={p.payment_id ? 'Marcar como pago' : 'Evento sem cobrança configurada'}
                       >
                         {isLoading
                           ? <span className="size-3.5 rounded-full border-2 border-primary-400 border-t-transparent animate-spin" />
