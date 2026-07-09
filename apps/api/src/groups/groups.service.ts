@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import type { AuthzService } from '../common/authz.service'
-import type { PrismaService } from '../prisma/prisma.service'
+import { AuthzService } from '../common/authz.service'
+import { PrismaService } from '../prisma/prisma.service'
 
 function slugify(name: string): string {
   return name

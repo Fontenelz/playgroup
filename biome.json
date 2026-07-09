@@ -13,7 +13,12 @@
   },
   "linter": {
     "enabled": true,
-    "rules": { "preset": "recommended" }
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "useImportType": "off"
+      }
+    }
   },
   "javascript": {
     "formatter": { "quoteStyle": "single", "semicolons": "asNeeded" },

@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import type { Prisma } from '../../generated/prisma'
-import type { AuthzService } from '../common/authz.service'
+import { AuthzService } from '../common/authz.service'
 import { SPORT_LABELS } from '../common/sports'
-import type { PrismaService } from '../prisma/prisma.service'
+import { PrismaService } from '../prisma/prisma.service'
 
 export interface CreateEventDto {
   date: string

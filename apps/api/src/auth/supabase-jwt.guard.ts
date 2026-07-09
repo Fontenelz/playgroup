@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common'
 import type { Request } from 'express'
-import type { SupabaseJwtService, SupabaseUser } from './supabase-jwt.service'
+import { SupabaseJwtService, type SupabaseUser } from './supabase-jwt.service'
 
 export interface AuthenticatedRequest extends Request {
   user?: SupabaseUser

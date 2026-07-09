@@ -3,7 +3,7 @@ import { IsArray, IsIn, IsInt, IsOptional, IsPositive, IsString } from 'class-va
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
-import type { EventsService } from './events.service'
+import { EventsService } from './events.service'
 
 class CreateEventDto {
   @IsString()

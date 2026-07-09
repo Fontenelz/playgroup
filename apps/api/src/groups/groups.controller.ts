@@ -3,7 +3,7 @@ import { IsIn, IsInt, IsOptional, IsPositive, IsString, MaxLength, Min } from 'c
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
-import type { GroupsService } from './groups.service'
+import { GroupsService } from './groups.service'
 
 class CreateGroupDto {
   @IsString()

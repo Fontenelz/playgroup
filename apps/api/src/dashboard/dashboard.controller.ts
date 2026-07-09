@@ -2,7 +2,7 @@ import { Controller, Get, UseGuards } from '@nestjs/common'
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
-import type { DashboardService } from './dashboard.service'
+import { DashboardService } from './dashboard.service'
 
 @UseGuards(SupabaseJwtGuard)
 @Controller()

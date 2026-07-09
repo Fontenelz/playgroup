@@ -141,25 +141,20 @@ Dark-mode only (`color-scheme: dark` forçado em `:root`). Tokens via Tailwind v
 - `config.toml` — config do CLI Supabase para rodar Auth/Storage/Realtime localmente (portas 54321-54322). Não é o Postgres de dados da app (esse é o do `docker-compose.yml`, porta 5433).
 - `migrations/001_initial_schema.sql` — **schema legado**, único migration existente. Documenta a arquitetura original com RLS + funções `SECURITY DEFINER` (`is_group_member`, `get_invite_preview`, `redeem_invite`, `get_guest_event_preview`, `confirm_event_guest`). Serve como referência histórica das regras de negócio, já que a lógica de autorização foi portada para `AuthzService` em TypeScript. Divergências conhecidas: a versão SQL de `get_guest_event_preview` não tem o status `auth_required` nem o conceito de evento standalone — isso foi adicionado só na versão TS, depois que eventos standalone foram introduzidos.
 
-## 5. Deploy (Render)
+## 5. Deploy (Vercel + Neon)
 
-Configurado via Blueprint em `render.yaml` (raiz) — cobre os 3 recursos de produção:
+Migrado do Render (blueprint `render.yaml`, removido) para Vercel — **sem IaC versionado no repo**, configuração feita direto no dashboard da Vercel (cada app é um "Project" Vercel separado, root directory apontando pro respectivo `apps/*`).
 
-- **`playgroup-db`** — Postgres gerenciado pelo Render (plano `free`), substitui o Postgres local do `docker-compose.yml` em produção.
-- **`playgroup-api`** — serviço web (NestJS). Build: `pnpm install` → `prisma generate` → `nest build`. `preDeployCommand` roda `prisma migrate deploy` antes de cada release. Health check em `GET /health` (endpoint público adicionado em `app.controller.ts` especificamente para isso — a API não tinha nenhuma rota pública na raiz antes).
-- **`playgroup-web`** — serviço web (Next.js). Build/start via `pnpm --filter web build/start`.
+- **`apps/api`** (NestJS) — `https://playgroup-api.vercel.app/`. Vercel roda o Nest como função serverless (não há `vercel.json` no repo — build/output detectado via `apps/api/package.json`).
+- **`apps/web`** (Next.js) — `https://playgroups.vercel.app/`.
+- **Banco de dados**: Postgres gerenciado pela **Neon**, substitui o Postgres do Render (que por sua vez substituía o `docker-compose.yml` local só em produção). `DATABASE_URL` aponta pra Neon.
+- **Auth**: continua 100% no **Supabase**, sem mudança — Neon é só o Postgres de dados da aplicação (Prisma), Supabase segue emitindo/validando os JWTs.
 
-URLs previsíveis (nomes fixos no Blueprint): `https://playgroup-api.onrender.com` e `https://playgroup-web.onrender.com`, usadas para popular automaticamente `WEB_ORIGIN`, `NEXT_PUBLIC_API_URL` e `API_URL`.
+⚠️ **Ponto de atenção conhecido**: a `DATABASE_URL` de produção está configurada com a **conexão direta** do Neon (sem o host `-pooler`/PgBouncer). Funções serverless da Vercel abrem uma conexão nova por invocação — sob carga, isso pode esgotar o limite de conexões do Neon rapidamente. Se aparecerem erros de `too many connections` ou timeouts intermitentes em produção, o primeiro lugar a olhar é trocar `DATABASE_URL` pela pooled connection string do Neon (e, se necessário, usar `directUrl` no `datasource db` do `schema.prisma` — hoje só tem `url`, sem `directUrl` — apontando pra conexão direta apenas para `prisma migrate deploy`).
 
-**Env vars que exigem preenchimento manual no dashboard do Render** (marcadas `sync: false` no Blueprint, não versionadas por serem segredos do projeto Supabase):
-- API: `SUPABASE_URL`, `SUPABASE_JWKS_URL`
-- Web: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+Como as migrations são aplicadas em produção (Vercel não tem um "release phase" nativo como o Render): confirmar no dashboard da Vercel se `prisma migrate deploy` está no build command do projeto `apps/api` ou se é rodado manualmente — isso não está documentado/versionado ainda, então checar antes de assumir que migrations novas sobem sozinhas no deploy.
 
-**Plano atual: `free`** — implica duas limitações a ter em mente:
-- Os serviços web "dormem" após ~15 min sem tráfego (cold start lento no primeiro request seguinte).
-- O Postgres free expira em 30 dias — depois disso é preciso recriar o banco (e migrar dados) ou fazer upgrade para um plano pago.
-
-Para atualizar o deploy: editar `render.yaml` e dar push — o Render aplica o Blueprint automaticamente em repos conectados.
+Para atualizar env vars de produção: dashboard da Vercel de cada projeto (não há blueprint versionado); manter `API_URL`/`NEXT_PUBLIC_API_URL` (web) sincronizadas com a URL da API acima.
 
 ## 6. Pontos de atenção para quem for mexer no código
 

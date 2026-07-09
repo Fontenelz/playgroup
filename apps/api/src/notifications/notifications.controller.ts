@@ -2,7 +2,7 @@ import { Controller, Delete, Get, Param, ParseUUIDPipe, Post, UseGuards } from '
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
-import type { NotificationsService } from './notifications.service'
+import { NotificationsService } from './notifications.service'
 
 @UseGuards(SupabaseJwtGuard)
 @Controller('notifications')

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
-import type { AuthzService } from '../common/authz.service'
-import type { PrismaService } from '../prisma/prisma.service'
+import { AuthzService } from '../common/authz.service'
+import { PrismaService } from '../prisma/prisma.service'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
