@@ -9,6 +9,9 @@ export interface ProfileInput {
   nickname: string
   city: string
   sports: string[]
+  bio?: string
+  skillLevel?: 'beginner' | 'intermediate' | 'advanced' | 'professional'
+  avatarUrl?: string
 }
 
 export async function saveProfile(data: ProfileInput, next?: string) {

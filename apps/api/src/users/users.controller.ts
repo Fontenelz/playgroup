@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Patch, Put, UseGuards } from '@nestjs/common'
-import { IsArray, IsOptional, IsString } from 'class-validator'
+import { IsArray, IsIn, IsOptional, IsString } from 'class-validator'
 import { SupabaseJwtGuard } from '../auth/supabase-jwt.guard'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
@@ -38,6 +38,18 @@ class UpdateProfileDto {
   @IsArray()
   @IsString({ each: true })
   sports?: string[]
+
+  @IsOptional()
+  @IsString()
+  bio?: string
+
+  @IsOptional()
+  @IsIn(['beginner', 'intermediate', 'advanced', 'professional'])
+  skillLevel?: 'beginner' | 'intermediate' | 'advanced' | 'professional'
+
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string
 }
 
 @UseGuards(SupabaseJwtGuard)

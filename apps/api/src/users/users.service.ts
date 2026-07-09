@@ -56,7 +56,15 @@ export class UsersService {
 
   updateProfile(
     userId: string,
-    dto: { name?: string; nickname?: string; city?: string; sports?: string[] },
+    dto: {
+      name?: string
+      nickname?: string
+      city?: string
+      sports?: string[]
+      bio?: string
+      skillLevel?: 'beginner' | 'intermediate' | 'advanced' | 'professional'
+      avatarUrl?: string
+    },
   ) {
     return this.prisma.user.update({ where: { id: userId }, data: dto })
   }

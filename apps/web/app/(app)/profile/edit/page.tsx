@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Avatar } from '@/components/ui/Avatar'
 import { SelectCardGroup } from '@/components/ui/SelectCard'
 import { useAuthStore } from '@/store/auth.store'
+import { updateProfile } from '@/lib/actions/profile'
 import { SPORTS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { SportId } from '@/lib/constants'
@@ -87,19 +88,39 @@ function EditProfileForm({ storeUser }: { storeUser: User }) {
   async function handleSave() {
     if (!name.trim()) { toast.error('Nome é obrigatório'); return }
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 900))
 
-    updateUser({
-      name:        name.trim(),
-      nickname:    nickname.trim() || name.split(' ')[0],
-      bio:         bio.trim() || undefined,
-      city:        city.trim() || undefined,
+    const trimmedName = name.trim()
+    const trimmedNickname = nickname.trim() || trimmedName.split(' ')[0]
+    const trimmedBio = bio.trim()
+    const trimmedCity = city.trim()
+
+    // avatarPreview pode ser um blob: local (upload de foto ainda não tem
+    // endpoint de verdade) — nunca mandar isso pro backend.
+    const result = await updateProfile({
+      name: trimmedName,
+      nickname: trimmedNickname,
+      city: trimmedCity || undefined,
       sports,
-      skill_level: skillLevel,
-      avatar_url:  avatarPreview,
+      bio: trimmedBio || undefined,
+      skillLevel,
     })
 
     setLoading(false)
+
+    if (result?.error) {
+      toast.error(result.error)
+      return
+    }
+
+    updateUser({
+      name:        trimmedName,
+      nickname:    trimmedNickname,
+      bio:         trimmedBio || undefined,
+      city:        trimmedCity || undefined,
+      sports,
+      skill_level: skillLevel,
+    })
+
     toast.success('Perfil atualizado! ✅')
     router.back()
   }
