@@ -61,6 +61,13 @@ body {
   padding-bottom: max(env(safe-area-inset-bottom), 1rem);
 }
 
+/* Posiciona um elemento fixed/sticky logo acima da BottomNav (altura 4rem +
+   o mesmo padding de safe-area que ela usa via .safe-bottom), em vez de
+   bottom-0 puro — que fica escondido atrás da nav em qualquer aparelho. */
+.above-bottom-nav {
+  bottom: calc(4rem + max(env(safe-area-inset-bottom), 1rem));
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #1e293b; }

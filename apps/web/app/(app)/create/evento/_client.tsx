@@ -163,7 +163,7 @@ export function CreateStandaloneEventClient() {
       </div>
 
       {/* ── Footer CTA ───────────────────────────────────────────────── */}
-      <div className="sticky bottom-0 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/60 px-4 py-4 safe-bottom">
+      <div className="sticky above-bottom-nav z-40 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/60 px-4 py-4">
         {step < TOTAL_STEPS ? (
           <Button
             fullWidth

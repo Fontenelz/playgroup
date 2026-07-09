@@ -37,7 +37,7 @@ export function BottomSheet({ isOpen, onClose, title, children, className }: Bot
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm"
           />
 
           {/* Sheet */}
@@ -47,7 +47,7 @@ export function BottomSheet({ isOpen, onClose, title, children, className }: Bot
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 40 }}
             className={cn(
-              'fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700',
+              'fixed bottom-0 left-0 right-0 z-[60] bg-slate-900 border-t border-slate-700',
               'rounded-t-3xl shadow-2xl max-w-lg mx-auto',
               'safe-bottom',
               className,

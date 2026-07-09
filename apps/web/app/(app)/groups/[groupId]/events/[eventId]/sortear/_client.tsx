@@ -399,7 +399,7 @@ export default function SortearClient({ eventTitle, confirmedParticipants }: Sor
 
       {/* ── Footer CTA ─────────────────────────────────────────────── */}
       {!isDrawn && (
-        <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto px-4 py-4 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/60">
+        <div className="fixed above-bottom-nav left-0 right-0 z-40 max-w-lg mx-auto px-4 py-4 bg-slate-950/95 backdrop-blur-md border-t border-slate-800/60">
           <Button
             fullWidth
             size="lg"
