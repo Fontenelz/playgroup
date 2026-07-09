@@ -11,6 +11,7 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**", "generated/**"],
       "env": [
         "DATABASE_URL",
+        "DIRECT_URL",
         "WEB_ORIGIN",
         "SUPABASE_URL",
         "SUPABASE_JWKS_URL",
