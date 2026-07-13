@@ -143,6 +143,33 @@ export class EventsController {
     return {}
   }
 
+  @Post('events/:eventId/waitlist/join')
+  async joinWaitlist(
+    @CurrentUser() user: SupabaseUser,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+  ) {
+    await this.events.joinWaitlist(eventId, user.id)
+    return {}
+  }
+
+  @Post('events/:eventId/waitlist/leave')
+  async leaveWaitlist(
+    @CurrentUser() user: SupabaseUser,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+  ) {
+    await this.events.leaveWaitlist(eventId, user.id)
+    return {}
+  }
+
+  @Post('events/:eventId/waitlist/confirm')
+  async confirmWaitlistSpot(
+    @CurrentUser() user: SupabaseUser,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
+  ) {
+    await this.events.confirmWaitlistSpot(eventId, user.id)
+    return {}
+  }
+
   @Post('events/:eventId/participants/:participantUserId/approve')
   approveParticipant(
     @CurrentUser() user: SupabaseUser,

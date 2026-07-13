@@ -138,6 +138,16 @@ export class EventsService {
   }
 
   async detail(eventId: string, userId: string) {
+    const eventKind = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { groupId: true },
+    })
+    if (!eventKind) throw new NotFoundException('Evento não encontrado')
+    if (eventKind.groupId) {
+      // Garante que reservas de fila vencidas já tenham liberado a vaga antes de montar a resposta.
+      await this.sweepExpiredWaitlist(eventId)
+    }
+
     const event = await this.prisma.event.findUnique({ where: { id: eventId } })
     if (!event) throw new NotFoundException('Evento não encontrado')
 
@@ -168,7 +178,7 @@ export class EventsService {
       }
     }
 
-    const [participantsRaw, myParticipation] = await Promise.all([
+    const [participantsRaw, myParticipation, waitlistRaw, myWaitlistEntry] = await Promise.all([
       this.prisma.eventParticipant.findMany({
         where: {
           eventId,
@@ -189,6 +199,27 @@ export class EventsService {
         where: { eventId, userId },
         select: { status: true },
       }),
+      event.groupId
+        ? this.prisma.waitlist.findMany({
+            where: { eventId, status: { in: ['waiting', 'notified'] } },
+            orderBy: { joinedAt: 'asc' },
+            select: {
+              id: true,
+              userId: true,
+              status: true,
+              isMonthly: true,
+              joinedAt: true,
+              expiresAt: true,
+              user: { select: { id: true, name: true, nickname: true, avatarUrl: true } },
+            },
+          })
+        : Promise.resolve([]),
+      event.groupId
+        ? this.prisma.waitlist.findFirst({
+            where: { eventId, userId, status: { in: ['waiting', 'notified'] } },
+            select: { status: true, expiresAt: true },
+          })
+        : Promise.resolve(null),
     ])
 
     const toItem = (p: (typeof participantsRaw)[number]) => ({
@@ -202,15 +233,33 @@ export class EventsService {
     })
 
     const participants = participantsRaw.filter((p) => p.status !== 'declined').map(toItem)
-    const waitlist = participantsRaw
-      .filter((p) => p.status === 'pending')
-      .map((p) => ({
-        id: p.id,
-        user_id: p.userId,
-        user: p.user,
-        confirmed_at: p.confirmedAt,
-      }))
     const declinedParticipants = participantsRaw.filter((p) => p.status === 'declined').map(toItem)
+
+    // Eventos de grupo usam a fila de espera de verdade (tabela Waitlist); eventos
+    // avulsos continuam usando EventParticipant.status = 'pending' como antes.
+    const waitlist = event.groupId
+      ? waitlistRaw.map((w) => ({
+          id: w.id,
+          user_id: w.userId,
+          user: w.user,
+          status: w.status,
+          is_monthly: w.isMonthly,
+          joined_at: w.joinedAt,
+          expires_at: w.expiresAt,
+        }))
+      : participantsRaw
+          .filter((p) => p.status === 'pending')
+          .map((p) => ({
+            id: p.id,
+            user_id: p.userId,
+            user: p.user,
+            confirmed_at: p.confirmedAt,
+          }))
+
+    const myStatus = myParticipation?.status ?? (myWaitlistEntry ? 'waitlist' : null)
+    const myWaitlist = myWaitlistEntry
+      ? { status: myWaitlistEntry.status, expires_at: myWaitlistEntry.expiresAt }
+      : null
 
     return {
       event: {
@@ -234,7 +283,8 @@ export class EventsService {
       participants,
       waitlist,
       declinedParticipants,
-      myStatus: myParticipation?.status ?? null,
+      myStatus,
+      myWaitlist,
     }
   }
 
@@ -253,10 +303,12 @@ export class EventsService {
 
     if (event.groupId) {
       await this.authz.assertGroupMember(event.groupId, userId)
+      await this.confirmOrJoinWaitlist(eventId, userId)
+      return
     }
 
     // Evento avulso público: nunca confirma automático, sempre exige aprovação do organizador.
-    if (!event.groupId && event.visibility === 'public') {
+    if (event.visibility === 'public') {
       await this.upsertParticipant(eventId, userId, 'pending', null)
       return
     }
@@ -268,7 +320,190 @@ export class EventsService {
   }
 
   async declineParticipation(eventId: string, userId: string) {
-    await this.upsertParticipant(eventId, userId, 'declined', null)
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { groupId: true },
+    })
+    if (!event) throw new NotFoundException('Evento não encontrado')
+
+    const { previousStatus } = await this.upsertParticipant(eventId, userId, 'declined', null)
+
+    // Só eventos de grupo usam a fila de espera de verdade (tabela Waitlist);
+    // liberar uma vaga confirmada precisa avisar o próximo da fila.
+    if (event.groupId && previousStatus === 'confirmed') {
+      await this.promoteNextWaitlistEntry(eventId)
+    }
+  }
+
+  /** Fila de espera (tabela Waitlist) — só para eventos de grupo. */
+  async joinWaitlist(eventId: string, userId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { groupId: true },
+    })
+    if (!event) throw new NotFoundException('Evento não encontrado')
+    if (!event.groupId) {
+      throw new BadRequestException('Fila de espera só está disponível para eventos de grupo')
+    }
+    await this.authz.assertGroupMember(event.groupId, userId)
+    await this.confirmOrJoinWaitlist(eventId, userId)
+  }
+
+  async leaveWaitlist(eventId: string, userId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { groupId: true },
+    })
+    if (!event) throw new NotFoundException('Evento não encontrado')
+    if (!event.groupId) {
+      throw new BadRequestException('Fila de espera só está disponível para eventos de grupo')
+    }
+
+    await this.sweepExpiredWaitlist(eventId)
+
+    const entry = await this.prisma.waitlist.findUnique({
+      where: { eventId_userId: { eventId, userId } },
+    })
+    if (!entry || (entry.status !== 'waiting' && entry.status !== 'notified')) {
+      throw new NotFoundException('Você não está na fila de espera deste evento')
+    }
+
+    await this.prisma.waitlist.update({ where: { id: entry.id }, data: { status: 'left' } })
+
+    // Se a vaga já estava reservada (notified) pra essa pessoa, libera pro próximo da fila.
+    if (entry.status === 'notified') {
+      await this.releaseReservedSlot(eventId)
+      await this.promoteNextWaitlistEntry(eventId)
+    }
+  }
+
+  async confirmWaitlistSpot(eventId: string, userId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { groupId: true },
+    })
+    if (!event) throw new NotFoundException('Evento não encontrado')
+    if (!event.groupId) {
+      throw new BadRequestException('Fila de espera só está disponível para eventos de grupo')
+    }
+
+    await this.sweepExpiredWaitlist(eventId)
+
+    const entry = await this.prisma.waitlist.findUnique({
+      where: { eventId_userId: { eventId, userId } },
+    })
+    if (entry?.status !== 'notified') {
+      throw new BadRequestException('Sua vaga expirou ou você não foi chamado para confirmar')
+    }
+
+    // participant_count já foi incrementado quando a vaga foi reservada
+    // (promoteNextWaitlistEntry), então aqui só materializa o EventParticipant.
+    await this.prisma.waitlist.update({ where: { id: entry.id }, data: { status: 'confirmed' } })
+    await this.prisma.eventParticipant.upsert({
+      where: { eventId_userId: { eventId, userId } },
+      create: { eventId, userId, status: 'confirmed', confirmedAt: new Date() },
+      update: { status: 'confirmed', confirmedAt: new Date() },
+    })
+  }
+
+  /** Confirma direto se há vaga, senão entra (ou permanece) na fila de espera. Idempotente. */
+  private async confirmOrJoinWaitlist(eventId: string, userId: string) {
+    await this.sweepExpiredWaitlist(eventId)
+
+    const [event, existingParticipant, existingWaitlist] = await Promise.all([
+      this.prisma.event.findUnique({
+        where: { id: eventId },
+        select: { participantCount: true, maxParticipants: true },
+      }),
+      this.prisma.eventParticipant.findUnique({
+        where: { eventId_userId: { eventId, userId } },
+        select: { status: true },
+      }),
+      this.prisma.waitlist.findUnique({
+        where: { eventId_userId: { eventId, userId } },
+        select: { status: true },
+      }),
+    ])
+    if (!event) throw new NotFoundException('Evento não encontrado')
+
+    if (existingParticipant?.status === 'confirmed') return
+    if (existingWaitlist?.status === 'waiting' || existingWaitlist?.status === 'notified') return
+
+    const hasSpace = event.participantCount < event.maxParticipants
+    if (hasSpace) {
+      await this.upsertParticipant(eventId, userId, 'confirmed', new Date())
+      return
+    }
+
+    const position = await this.prisma.waitlist.count({
+      where: { eventId, status: { in: ['waiting', 'notified'] } },
+    })
+    await this.prisma.waitlist.upsert({
+      where: { eventId_userId: { eventId, userId } },
+      create: { eventId, userId, position: position + 1, status: 'waiting', joinedAt: new Date() },
+      update: { position: position + 1, status: 'waiting', joinedAt: new Date(), expiresAt: null },
+    })
+  }
+
+  /** Expira reservas (status notified) vencidas e repassa a vaga pro próximo da fila. */
+  private async sweepExpiredWaitlist(eventId: string) {
+    const expired = await this.prisma.waitlist.findMany({
+      where: { eventId, status: 'notified', expiresAt: { lt: new Date() } },
+      select: { id: true },
+    })
+
+    for (const entry of expired) {
+      await this.prisma.waitlist.update({ where: { id: entry.id }, data: { status: 'expired' } })
+      await this.releaseReservedSlot(eventId)
+      await this.promoteNextWaitlistEntry(eventId)
+    }
+  }
+
+  /** Se há vaga livre, reserva (status notified, 30min) pro primeiro da fila e notifica. */
+  private async promoteNextWaitlistEntry(eventId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { participantCount: true, maxParticipants: true, title: true },
+    })
+    if (!event || event.participantCount >= event.maxParticipants) return
+
+    const next = await this.prisma.waitlist.findFirst({
+      where: { eventId, status: 'waiting' },
+      orderBy: { joinedAt: 'asc' },
+    })
+    if (!next) return
+
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000)
+    await this.prisma.waitlist.update({
+      where: { id: next.id },
+      data: { status: 'notified', expiresAt },
+    })
+    await this.prisma.event.update({
+      where: { id: eventId },
+      data: { participantCount: { increment: 1 } },
+    })
+    await this.prisma.notification.create({
+      data: {
+        userId: next.userId,
+        type: 'waitlist_called',
+        title: 'Vaga disponível! 🎉',
+        body: `Uma vaga abriu em "${event.title}". Confirme em até 30 minutos.`,
+        data: { eventId },
+      },
+    })
+  }
+
+  private async releaseReservedSlot(eventId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { participantCount: true },
+    })
+    if (event && event.participantCount > 0) {
+      await this.prisma.event.update({
+        where: { id: eventId },
+        data: { participantCount: { decrement: 1 } },
+      })
+    }
   }
 
   async approveParticipant(eventId: string, participantUserId: string, actingUserId: string) {
@@ -302,7 +537,7 @@ export class EventsService {
     userId: string,
     status: 'confirmed' | 'pending' | 'declined',
     confirmedAt: Date | null,
-  ) {
+  ): Promise<{ previousStatus: string | null }> {
     const before = await this.prisma.eventParticipant.findUnique({
       where: { eventId_userId: { eventId, userId } },
       select: { status: true },
@@ -315,6 +550,7 @@ export class EventsService {
     })
 
     await this.syncParticipantCount(eventId, before?.status ?? null, status)
+    return { previousStatus: before?.status ?? null }
   }
 
   /** Espelha o trigger trg_update_participant_count do schema original. */

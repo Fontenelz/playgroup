@@ -12,6 +12,7 @@ interface EventDetailResponse {
   waitlist: WaitlistItem[]
   declinedParticipants: ParticipantItem[]
   myStatus: ParticipantStatus | null
+  myWaitlist: { status: 'waiting' | 'notified'; expires_at: string | null } | null
 }
 
 export default async function EventPage({
@@ -43,6 +44,7 @@ export default async function EventPage({
       waitlist={data.waitlist}
       declinedParticipants={data.declinedParticipants}
       initialMyStatus={data.myStatus}
+      initialMyWaitlist={data.myWaitlist}
     />
   )
 }

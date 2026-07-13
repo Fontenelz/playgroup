@@ -213,6 +213,36 @@ export async function declineParticipation(eventId: string): Promise<{ error?: s
   }
 }
 
+export async function joinWaitlist(eventId: string): Promise<{ error?: string }> {
+  try {
+    await api.post(`/events/${eventId}/waitlist/join`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
+
+export async function leaveWaitlist(eventId: string): Promise<{ error?: string }> {
+  try {
+    await api.post(`/events/${eventId}/waitlist/leave`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
+
+export async function confirmWaitlistSpot(eventId: string): Promise<{ error?: string }> {
+  try {
+    await api.post(`/events/${eventId}/waitlist/confirm`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
+
 export async function approveParticipant(eventId: string, participantUserId: string): Promise<{ error?: string }> {
   try {
     await api.post(`/events/${eventId}/participants/${participantUserId}/approve`)
