@@ -126,9 +126,13 @@ export default function EventPageClient({
   const [now, setNow] = useState<number | null>(null)
   useEffect(() => {
     if (myWaitlist?.status !== 'notified' || !myWaitlist.expires_at) return
-    setNow(Date.now())
-    const interval = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(interval)
+    const tick = () => setNow(Date.now())
+    const immediate = setTimeout(tick, 0)
+    const interval = setInterval(tick, 1000)
+    return () => {
+      clearTimeout(immediate)
+      clearInterval(interval)
+    }
   }, [myWaitlist?.status, myWaitlist?.expires_at])
 
   const waitlistSecondsLeft =
