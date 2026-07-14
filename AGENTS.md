@@ -4,13 +4,20 @@ Guia técnico para agentes de IA (e humanos) trabalhando neste repositório. Pla
 
 ## 1. Visão geral do monorepo
 
-- **Gerenciador**: pnpm workspaces (`pnpm@10.15.1`) + **Turborepo** (`turbo.json`). Workspaces apenas em `apps/*` — **não existe `packages/*`**, portanto não há pacote de tipos compartilhado entre API e Web.
+- **Gerenciador**: pnpm workspaces (`pnpm@10.15.1`) + **Turborepo** (`turbo.json`). Workspaces em `apps/*` e `packages/*`.
 - **Apps**:
   - `apps/api` — NestJS 11 + Prisma 6 (porta padrão `3333`)
   - `apps/web` — Next.js 16 (App Router) + React 19 (porta padrão `3000`)
+- **Packages** (`packages/*`, consumidos via `workspace:*`):
+  - `@playgroup/typescript-config` — `base.json`/`nextjs.json`/`nestjs.json`, estendidos pelos `tsconfig.json` de cada app. Só JSON, sem build.
+  - `@playgroup/eslint-config` — wrapper de `eslint-config-next` (`./next` export), consumido só por `apps/web/eslint.config.mjs`. Só source `.mjs`, sem build.
+  - `@playgroup/types` — tipos de resposta da API espelhando o schema Prisma em snake_case (movidos de `apps/web/types/app.types.ts`, que agora só reexporta) + `SPORTS`/`SportId`/`SPORT_MAP` (movidos de `apps/web/lib/constants.ts`, que também reexporta). `apps/api/src/common/sports.ts` deriva `SPORT_LABELS` a partir de `SPORTS` em vez de duplicar a lista manualmente. **Tem build step** (`tsc` → `dist/`) porque exporta dados em runtime (`SPORTS`), não só tipos — consumir o `.ts` fonte direto pelo `nest build` quebraria o `rootDir`.
+  - `@playgroup/logger` — wrapper fino de `console.*` com `scope` e nível mínimo via `LOG_LEVEL`, usável em API e Web. Também tem build step (`tsc` → `dist/`). Está disponível como dependência nos dois apps mas **ainda não foi adotado** em substituição aos `console.log`/`Logger` do Nest existentes — é follow-up.
+  - `turbo.json`: task `dev` tem `dependsOn: ["^build"]` para garantir que `@playgroup/types`/`@playgroup/logger` sejam buildados antes dos apps subirem. Isso **não** é watch mode — editar `packages/logger/src` ou `packages/types/src` exige rodar o build de novo (`pnpm --filter @playgroup/logger build`) pra refletir nos apps.
 - **Banco de dados de dados da aplicação**: Postgres local via `docker-compose.yml` (serviço `postgres`, porta host **5433**), gerenciado pelo Prisma. Não confundir com o diretório `supabase/`.
 - **Supabase**: usado **apenas para Auth** (JWT, OAuth, sessões anônimas). O schema SQL em `supabase/migrations/001_initial_schema.sql` é **legado/histórico** — representa a arquitetura antiga baseada em RLS + funções `SECURITY DEFINER` no Postgres, que foi abandonada em favor da reescrita em NestJS/Prisma (autorização agora vive em código, em `AuthzService`).
-- **Lint/format**: Biome (`biome.json`, raiz) cobre apenas `apps/api/**`. `apps/web` usa ESLint flat config (`eslint-config-next`).
+- **Lint/format**: Biome (`biome.json`, raiz) cobre `apps/api/**` e `packages/**`. `apps/web` usa ESLint flat config (via `@playgroup/eslint-config/next`, que embrulha `eslint-config-next`).
+- **Git hooks**: Husky + lint-staged (`.husky/pre-commit`, `.lintstagedrc.json`) rodam Biome (`apps/api`, `packages/`) e ESLint (`apps/web`) nos arquivos staged antes de cada commit. Não havia nenhuma validação automática antes disso.
 - **Sem CI** (não há `.github/workflows`), **sem Dockerfiles de app** (só Postgres containerizado), **sem testes** em nenhum dos dois apps (zero `*.spec.ts`, Jest não instalado na API; Playwright está como devDependency no web mas sem specs).
 - **Sem `.nvmrc`/`engines`** — versão de Node não é fixada.
 - **`README.md` da raiz está desatualizado** (ainda é o boilerplate padrão do `create-next-app`, não reflete o monorepo).
@@ -158,7 +165,7 @@ Para atualizar env vars de produção: dashboard da Vercel de cada projeto (não
 
 ## 6. Pontos de atenção para quem for mexer no código
 
-- **Sem tipos compartilhados**: qualquer mudança de schema exige atualizar manualmente `schema.prisma`, o DTO do controller correspondente, e `apps/web/types/app.types.ts` (além de interfaces inline duplicadas em `lib/actions/*.ts`). Não existe codegen (OpenAPI/tRPC) ligando os dois apps.
+- **Tipos parcialmente compartilhados**: `packages/types` (`@playgroup/types`) centraliza as interfaces de resposta da API e `SPORTS`/`SportId`, consumidas por `apps/web` (via reexport em `types/app.types.ts` e `lib/constants.ts`) e por `apps/api` (`common/sports.ts`). Mudança de schema ainda exige atualizar `schema.prisma`, o DTO do controller e `packages/types` manualmente — não existe codegen (OpenAPI/tRPC). E os DTOs/services da API ainda **não** anotam seus retornos com esses tipos (só `SPORT_LABELS` foi migrado); as interfaces inline duplicadas em `apps/web/lib/actions/*.ts` também não foram migradas — ambos são follow-up.
 - **Convenção snake_case na API**: respostas JSON da API usam snake_case por mapeamento manual em cada service — não esquecer de seguir o padrão ao adicionar campos novos.
 - **Ordem de rotas no Nest**: `GET /events/discover` precisa ser declarada antes de `GET /events/:eventId` para não ser capturada pelo parâmetro dinâmico.
 - **`Waitlist` e `Payment`** existem no schema Prisma e no seed, mas **não têm controller/service expondo rotas** — funcionalidade parcialmente implementada.
