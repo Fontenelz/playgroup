@@ -3,7 +3,14 @@
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["apps/api/**", "!apps/api/dist", "!apps/api/generated", "!**/node_modules"]
+    "includes": [
+      "apps/api/**",
+      "!apps/api/dist",
+      "!apps/api/generated",
+      "packages/**",
+      "!packages/*/dist",
+      "!**/node_modules"
+    ]
   },
   "formatter": {
     "enabled": true,

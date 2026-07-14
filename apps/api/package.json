@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",
+    "@playgroup/logger": "workspace:*",
+    "@playgroup/types": "workspace:*",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.1.6",
     "@nestjs/platform-express": "^11.1.6",
@@ -31,6 +33,7 @@
   "devDependencies": {
     "@nestjs/cli": "^11.0.10",
     "@nestjs/schematics": "^11.0.7",
+    "@playgroup/typescript-config": "workspace:*",
     "@types/express": "^5.0.5",
     "@types/node": "^22.19.1",
     "prisma": "^6.17.2",

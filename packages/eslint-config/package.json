@@ -1,0 +1,16 @@
+{
+  "name": "@playgroup/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    "./next": "./next.mjs"
+  },
+  "dependencies": {
+    "eslint-config-next": "16.2.9"
+  },
+  "peerDependencies": {
+    "eslint": "^9"
+  }
+}

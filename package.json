@@ -10,10 +10,13 @@
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "db:studio": "pnpm --filter api prisma:studio",
-    "db:seed": "pnpm --filter api prisma:seed"
+    "db:seed": "pnpm --filter api prisma:seed",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
     "turbo": "^2.5.8"
   },
   "packageManager": "pnpm@10.15.1"
