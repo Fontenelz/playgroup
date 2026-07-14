@@ -15,7 +15,13 @@ import { Avatar, AvatarGroup } from '@/components/ui/Avatar'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { WaitlistRow } from '@/components/shared/ParticipantRow'
 import { SportIcon } from '@/components/shared/SportIcon'
-import { confirmParticipation, declineParticipation } from '@/lib/actions/events'
+import {
+  confirmParticipation,
+  declineParticipation,
+  joinWaitlist,
+  leaveWaitlist,
+  confirmWaitlistSpot,
+} from '@/lib/actions/events'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, formatCurrency, cn, copyToClipboard } from '@/lib/utils'
 import type { ParticipantStatus } from '@/types/app.types'
@@ -60,7 +66,14 @@ export interface WaitlistItem {
   id: string
   user_id: string
   user: { id: string; name: string; nickname: string | null; avatar_url?: string | null }
-  confirmed_at?: string | null
+  status: 'waiting' | 'notified'
+  joined_at: string
+  expires_at?: string | null
+}
+
+export interface MyWaitlist {
+  status: 'waiting' | 'notified'
+  expires_at: string | null
 }
 
 interface EventPageClientProps {
@@ -73,6 +86,7 @@ interface EventPageClientProps {
   waitlist: WaitlistItem[]
   declinedParticipants: ParticipantItem[]
   initialMyStatus: ParticipantStatus | null
+  initialMyWaitlist: MyWaitlist | null
 }
 
 // ─── Cancel reasons ─────────────────────────────────────────────────────────────
@@ -90,14 +104,14 @@ const cancelReasons: { id: CancelReason; label: string }[] = [
 
 export default function EventPageClient({
   groupId, eventId, currentUserId, event, group,
-  participants, waitlist, declinedParticipants, initialMyStatus,
+  participants, waitlist, declinedParticipants, initialMyStatus, initialMyWaitlist,
 }: EventPageClientProps) {
   const router = useRouter()
   const [, startTransition] = useTransition()
 
   const [myStatus, setMyStatus]           = useState<ParticipantStatus | null>(initialMyStatus)
+  const [myWaitlist, setMyWaitlist]       = useState<MyWaitlist | null>(initialMyWaitlist)
   const [participantCount, setParticipantCount] = useState(event.participant_count)
-  const [waitlistTimer, setWaitlistTimer] = useState<number | null>(null)
 
   const [showCancel, setShowCancel]       = useState(false)
   const [cancelReason, setCancelReason]   = useState<CancelReason | null>(null)
@@ -107,14 +121,24 @@ export default function EventPageClient({
   const [showShare, setShowShare]         = useState(false)
   const [loading, setLoading]             = useState<string | null>(null)
 
-  // Waitlist countdown
+  // Waitlist countdown — calculado a partir de myWaitlist.expires_at (fonte da
+  // verdade no servidor), não de um contador local, pra sobreviver a re-render.
+  const [now, setNow] = useState<number | null>(null)
   useEffect(() => {
-    if (waitlistTimer === null || waitlistTimer <= 0) return
-    const interval = setInterval(() => {
-      setWaitlistTimer((t) => (t !== null && t > 0 ? t - 1 : 0))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [waitlistTimer])
+    if (myWaitlist?.status !== 'notified' || !myWaitlist.expires_at) return
+    const tick = () => setNow(Date.now())
+    const immediate = setTimeout(tick, 0)
+    const interval = setInterval(tick, 1000)
+    return () => {
+      clearTimeout(immediate)
+      clearInterval(interval)
+    }
+  }, [myWaitlist?.status, myWaitlist?.expires_at])
+
+  const waitlistSecondsLeft =
+    myWaitlist?.status === 'notified' && myWaitlist.expires_at && now !== null
+      ? Math.max(0, Math.floor((new Date(myWaitlist.expires_at).getTime() - now) / 1000))
+      : null
 
   const confirmedList = participants.filter((p) => p.status === 'confirmed')
   const slots = event.max_participants - participantCount
@@ -149,12 +173,13 @@ export default function EventPageClient({
   async function handleJoinWaitlist() {
     setLoading('waitlist')
     startTransition(async () => {
-      const result = await confirmParticipation(eventId)
+      const result = await joinWaitlist(eventId)
       setLoading(null)
       if (result?.error) {
         toast.error(result.error)
       } else {
-        setMyStatus('pending')
+        setMyStatus('waitlist')
+        setMyWaitlist({ status: 'waiting', expires_at: null })
         toast('Você entrou na fila de espera. Avisaremos quando houver vaga! 🕐', { duration: 4000 })
       }
     })
@@ -163,14 +188,31 @@ export default function EventPageClient({
   async function handleLeaveWaitlist() {
     setLoading('leave-waitlist')
     startTransition(async () => {
-      const result = await declineParticipation(eventId)
+      const result = await leaveWaitlist(eventId)
       setLoading(null)
       if (result?.error) {
         toast.error(result.error)
       } else {
         setMyStatus(null)
-        setWaitlistTimer(null)
+        setMyWaitlist(null)
         toast('Você saiu da fila de espera.')
+      }
+    })
+  }
+
+  async function handleConfirmWaitlistSpot() {
+    setLoading('confirm')
+    startTransition(async () => {
+      const result = await confirmWaitlistSpot(eventId)
+      setLoading(null)
+      if (result?.error) {
+        toast.error(result.error)
+        router.refresh()
+      } else {
+        setMyStatus('confirmed')
+        setMyWaitlist(null)
+        toast.success('Presença confirmada! ✅')
+        router.refresh()
       }
     })
   }
@@ -202,8 +244,8 @@ export default function EventPageClient({
   }
 
   const visibleConfirmed = showAllConfirmed ? confirmedList : confirmedList.slice(0, 5)
-  const timerMin = waitlistTimer !== null ? Math.floor(waitlistTimer / 60) : 0
-  const timerSec = waitlistTimer !== null ? waitlistTimer % 60 : 0
+  const timerMin = waitlistSecondsLeft !== null ? Math.floor(waitlistSecondsLeft / 60) : 0
+  const timerSec = waitlistSecondsLeft !== null ? waitlistSecondsLeft % 60 : 0
 
   return (
     <div className="min-h-screen">
@@ -305,7 +347,7 @@ export default function EventPageClient({
             </motion.div>
           )}
 
-          {myStatus === 'pending' && waitlistTimer !== null && (
+          {myStatus === 'waitlist' && myWaitlist?.status === 'notified' && (
             <motion.div key="waitlist-called" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-3">
                 <div className="flex items-center gap-3">
@@ -324,7 +366,7 @@ export default function EventPageClient({
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button fullWidth onClick={handleConfirm} loading={loading === 'confirm'}>
+                  <Button fullWidth onClick={handleConfirmWaitlistSpot} loading={loading === 'confirm'}>
                     Confirmar vaga
                   </Button>
                   <Button variant="ghost" onClick={handleLeaveWaitlist} className="px-3">
@@ -335,7 +377,7 @@ export default function EventPageClient({
             </motion.div>
           )}
 
-          {myStatus === 'pending' && waitlistTimer === null && (
+          {myStatus === 'waitlist' && myWaitlist?.status !== 'notified' && (
             <motion.div key="waitlist" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
@@ -506,8 +548,9 @@ export default function EventPageClient({
                           position={i + 1}
                           name={w.user.nickname ?? w.user.name.split(' ')[0]}
                           avatarUrl={w.user.avatar_url ?? undefined}
-                          joinedAt={w.confirmed_at ?? new Date().toISOString()}
-                          status="waiting"
+                          joinedAt={w.joined_at}
+                          status={w.status}
+                          expiresAt={w.expires_at ?? undefined}
                           isMe={w.user_id === currentUserId}
                         />
                       </div>
