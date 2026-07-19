@@ -5,8 +5,8 @@ import {
   type ExceptionFilter,
   HttpException,
   HttpStatus,
-  Logger,
 } from '@nestjs/common'
+import { createLogger } from '@playgroup/logger'
 import type { Response } from 'express'
 import { Prisma } from '../../../generated/prisma'
 import type { AuthenticatedRequest } from '../../auth/supabase-jwt.guard'
@@ -38,7 +38,7 @@ function mapPrismaError(error: Prisma.PrismaClientKnownRequestError): {
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  private readonly logger = new Logger('ExceptionsHandler')
+  private readonly logger = createLogger('ExceptionsHandler')
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
@@ -88,7 +88,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const message = exception instanceof Error ? exception.message : String(exception)
 
     if (status >= 500) {
-      this.logger.error(`${context} — ${message}`, stack)
+      this.logger.error(`${context} — ${message}`, stack ? { stack } : undefined)
     } else {
       this.logger.warn(`${context} — ${message}`)
     }
