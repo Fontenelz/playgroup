@@ -18,14 +18,17 @@ Guia técnico para agentes de IA (e humanos) trabalhando neste repositório. Pla
 - **Supabase**: usado **apenas para Auth** (JWT, OAuth, sessões anônimas). O schema SQL em `supabase/migrations/001_initial_schema.sql` é **legado/histórico** — representa a arquitetura antiga baseada em RLS + funções `SECURITY DEFINER` no Postgres, que foi abandonada em favor da reescrita em NestJS/Prisma (autorização agora vive em código, em `AuthzService`).
 - **Lint/format**: Biome (`biome.json`, raiz) cobre `apps/api/**` e `packages/**`. `apps/web` usa ESLint flat config (via `@playgroup/eslint-config/next`, que embrulha `eslint-config-next`).
 - **Git hooks**: Husky + lint-staged (`.husky/pre-commit`, `.lintstagedrc.json`) rodam Biome (`apps/api`, `packages/`) e ESLint (`apps/web`) nos arquivos staged antes de cada commit. Não havia nenhuma validação automática antes disso.
-- **Sem CI** (não há `.github/workflows`), **sem Dockerfiles de app** (só Postgres containerizado), **sem testes** em nenhum dos dois apps (zero `*.spec.ts`, Jest não instalado na API; Playwright está como devDependency no web mas sem specs).
-- **Sem `.nvmrc`/`engines`** — versão de Node não é fixada.
-- **`README.md` da raiz está desatualizado** (ainda é o boilerplate padrão do `create-next-app`, não reflete o monorepo).
+- **CI**: `.github/workflows/ci.yml` — job `lint` (Biome + `pnpm --filter web lint`) e job `build` (`pnpm build` + `pnpm --filter api test:smoke`, contra um Postgres em service container). Roda em push/PR para `main`.
+- **Sem Dockerfiles de app** (só Postgres containerizado).
+- **Testes**: `pnpm test` (raiz) roda `turbo run test`, que dispara os dois apps em paralelo. `apps/api/test/smoke.ts` é um smoke test end-to-end do fluxo de eventos avulsos + RSVP de convidado — sobe o `AppModule` inteiro via `NestFactory` (valida o grafo de DI de verdade, não só lógica isolada) e roda separadamente no CI (`pnpm --filter api test:smoke`, não faz parte de `pnpm test`). `apps/api/src/**/*.spec.ts` cobre unidades específicas com Jest (`AuthzService`, cálculo de taxa em `EventsService.financeData`). `apps/web` tem Vitest configurado (`apps/web/vitest.config.ts`) cobrindo só `lib/draw.ts` (algoritmo de sorteio de times, extraído do client component `sortear/_client.tsx` pra ficar testável); Playwright continua como devDependency sem specs (sem testes de UI/E2E).
+- **Sem `.nvmrc`/`engines`** — versão de Node não é fixada (CI usa Node 22).
+- **`.env.example`** versionado em `apps/api/` e `apps/web/` (copiar para `.env`/`.env.local`) com as variáveis das seções 2 e 3.
 
 ### Scripts da raiz
 ```
 pnpm dev        # turbo run dev (ambos apps em paralelo, watch mode)
 pnpm build      # turbo run build
+pnpm test       # turbo run test (Jest na api, Vitest no web)
 pnpm lint       # biome check .
 pnpm format     # biome format --write .
 pnpm db:up      # sobe o Postgres local (docker compose)
@@ -42,11 +45,13 @@ Stack: `@nestjs/* ^11`, `@prisma/client ^6`, `class-validator`/`class-transforme
 ```
 app.module.ts
 auth/            SupabaseJwtGuard, SupabaseOptionalAuthGuard, SupabaseJwtService (@Global)
-common/          AuthzService (autorização em código), @CurrentUser(), SPORT_LABELS
-dashboard/  events/  groups/  guest-events/  invites/  notifications/  prisma/  users/
+common/          AuthzService (autorização em código), @CurrentUser(), SPORT_LABELS, AllExceptionsFilter
+dashboard/  events/  groups/  guest-events/  invites/  notifications/  payments/  prisma/  users/
 main.ts
 ```
-Não há pasta `dto/` dedicada — DTOs com `class-validator` ficam inline no topo de cada controller. Não há interceptors/pipes/exception filters customizados além das exceptions built-in do Nest.
+Não há pasta `dto/` dedicada — DTOs com `class-validator` ficam inline no topo de cada controller. Não há pipes customizados, mas há um exception filter global: `common/filters/all-exceptions.filter.ts` (`AllExceptionsFilter`, registrado em `main.ts` via `app.useGlobalFilters`) mapeia erros conhecidos do Prisma (`P2002`, `P2025`, `P2003`, `P2023`) para respostas HTTP sem vazar nomes de coluna/tabela, gera um `errorId` (UUID) pra erros 5xx e loga com contexto (`method`, `url`, `userId`).
+
+Waitlist e pagamentos não têm módulo/controller próprio dedicado — suas rotas vivem em `events.controller.ts`/`events.service.ts` (waitlist) e num `PaymentsModule` enxuto (`payments/`, só `mark-paid` por enquanto).
 
 ### Autenticação
 - `SupabaseJwtService` verifica o token via JWKS remoto (`jose.createRemoteJWKSet`), issuer `${SUPABASE_URL}/auth/v1`, audience `authenticated`. Extrai `SupabaseUser { id, email, avatarUrl }` do payload.
@@ -69,7 +74,7 @@ Reimplementação em código do que antes era RLS no Postgres (o Postgres de dad
 - `prisma/seed.ts` popula 6 usuários (1 guest), 2 grupos, convites, 5 eventos, pagamentos e notificações — útil para testar localmente.
 
 ### Modelos principais (Prisma)
-`User`, `Group`, `GroupMember`, `InviteCode`, `Event` (nullable `groupId` + `visibility` para standalone), `EventParticipant`, `Waitlist` (seedado mas **sem controller/rota expondo**), `Payment` (idem, **sem módulo de pagamentos ainda**), `Notification`.
+`User`, `Group`, `GroupMember`, `InviteCode`, `Event` (nullable `groupId` + `visibility` para standalone), `EventParticipant`, `Waitlist` (rotas em `events.controller.ts`, ver abaixo), `Payment` (rotas em `PaymentsModule` — só `mark-paid`; a criação dos registros é automática via `EventsService`, não há endpoint pra gerar/listar cobranças avulsas nem integração real de PIX apesar do campo `Group.pixKey`), `Notification`.
 
 **Convenção de resposta**: os serviços mapeiam manualmente os campos para **snake_case** no JSON de saída (`starts_at`, `max_participants`, `is_owner`, etc.), mesmo com Prisma/TS internamente em camelCase — herança da época em que o frontend consumia respostas diretas do Supabase/SQL. Não há interceptor global fazendo essa conversão; é manual em cada service.
 
@@ -77,8 +82,9 @@ Reimplementação em código do que antes era RLS no Postgres (o Postgres de dad
 - **Users** (`/users/me`, guarded): `GET /`, `GET /summary`, `PUT /` (upsert onboarding), `PATCH /`.
 - **Groups** (guarded): `GET /groups`, `POST /groups`, `GET /groups/:groupId` (detalhe + ranking + membros), `GET /groups/:groupId/basic`, `POST /groups/:groupId/invite-codes`.
 - **Invites**: `GET /invites/:code` (preview sem exigir membership), `POST /invites/:code/redeem` (transação atômica).
-- **Events** (guarded): `POST /groups/:groupId/events`, `POST /events` (standalone), `GET /events/discover` (feed público paginado — **precisa vir antes de `:eventId`** na ordem de rotas), `GET /events/:eventId`, `POST /events/:eventId/participation/{confirm,decline}`, `POST /events/:eventId/participants/:userId/{approve,reject}` (só para eventos standalone públicos), `GET /events/:eventId/finance`, `GET /events/:eventId/draw` (sorteio de times).
+- **Events** (guarded): `POST /groups/:groupId/events`, `POST /events` (standalone), `GET /events/discover` (feed público paginado — **precisa vir antes de `:eventId`** na ordem de rotas), `GET /events/:eventId`, `POST /events/:eventId/participation/{confirm,decline}`, `POST /events/:eventId/waitlist/{join,leave,confirm}`, `POST /events/:eventId/participants/:userId/{approve,reject}` (só para eventos standalone públicos), `GET /events/:eventId/finance`, `GET /events/:eventId/draw` (sorteio de times).
 - **Guest events** (`/guest-events`, guard misto por rota): `GET /:eventId` (`SupabaseOptionalAuthGuard`, retorna `status_code`: `ok|not_found|private|closed|auth_required`), `POST /:eventId/confirm` (`SupabaseJwtGuard`, aceita sessão anônima do Supabase; cria usuário guest mínimo se necessário; **retorna sempre um objeto JSON** `{ status }`, nunca string crua).
+- **Payments** (`/payments`, guarded): `POST /:paymentId/mark-paid` — só organizador do grupo da cobrança; não há rota pra listar cobranças do usuário nem gerar cobrança avulsa.
 - **Notifications** / **Dashboard** (`GET /home`, `GET /ranking`): guarded, agregam dados de múltiplos módulos.
 
 `participant_count` em `Event` é mantido manualmente em `EventsService.syncParticipantCount`, reimplementando o antigo trigger Postgres `trg_update_participant_count`.
@@ -168,7 +174,7 @@ Para atualizar env vars de produção: dashboard da Vercel de cada projeto (não
 - **Tipos parcialmente compartilhados**: `packages/types` (`@playgroup/types`) centraliza as interfaces de resposta da API e `SPORTS`/`SportId`, consumidas por `apps/web` (via reexport em `types/app.types.ts` e `lib/constants.ts`) e por `apps/api` (`common/sports.ts`). Mudança de schema ainda exige atualizar `schema.prisma`, o DTO do controller e `packages/types` manualmente — não existe codegen (OpenAPI/tRPC). E os DTOs/services da API ainda **não** anotam seus retornos com esses tipos (só `SPORT_LABELS` foi migrado); as interfaces inline duplicadas em `apps/web/lib/actions/*.ts` também não foram migradas — ambos são follow-up.
 - **Convenção snake_case na API**: respostas JSON da API usam snake_case por mapeamento manual em cada service — não esquecer de seguir o padrão ao adicionar campos novos.
 - **Ordem de rotas no Nest**: `GET /events/discover` precisa ser declarada antes de `GET /events/:eventId` para não ser capturada pelo parâmetro dinâmico.
-- **`Waitlist` e `Payment`** existem no schema Prisma e no seed, mas **não têm controller/service expondo rotas** — funcionalidade parcialmente implementada.
-- **Sem testes**: qualquer mudança não tem rede de segurança automatizada; validar manualmente (rodar `pnpm dev`, exercitar o fluxo na UI/API).
+- **`Payment` está incompleto**: só existe `mark-paid` (marcação manual por um organizador). Não há geração de cobrança avulsa, listagem por usuário, nem integração de pagamento real (PIX) — o campo `Group.pixKey` existe mas não é usado em nenhum fluxo automatizado.
+- **Testes**: cobertura ainda é fina — smoke test end-to-end (`apps/api/test/smoke.ts`) mais alguns `*.spec.ts` unitários na API (`AuthzService`, cálculo financeiro) e um no web (`lib/draw.ts`, sorteio de times). Nada de teste de componente/E2E no web, nem cobertura de rotas HTTP na API além do smoke test; validar mudanças de UI manualmente (`pnpm dev`, exercitar o fluxo na tela).
 - **`API_URL` vs `NEXT_PUBLIC_API_URL`** no web — manter sincronizadas.
 - Todo o app é **pt-BR** (strings, mensagens de erro, formatação de data/moeda) — manter esse idioma em qualquer texto voltado ao usuário.

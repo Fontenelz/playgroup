@@ -23,7 +23,7 @@ cd ../.. && pnpm db:seed                # opcional: popula dados de exemplo
 pnpm dev                                # sobe web (:3000) e api (:3333) em paralelo
 ```
 
-Cada app precisa de variáveis de ambiente próprias (`apps/api/.env`, `apps/web/.env.local`) — não há `.env.example` versionado ainda; ver a lista de variáveis nas seções 2 e 3 do `AGENTS.md`.
+Cada app precisa de variáveis de ambiente próprias — copie `apps/api/.env.example` para `apps/api/.env` e `apps/web/.env.example` para `apps/web/.env.local`, preenchendo os valores. Ver a lista comentada nas seções 2 e 3 do `AGENTS.md`.
 
 ## Estrutura
 
