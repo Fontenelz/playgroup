@@ -5,7 +5,7 @@ import { Clock, MapPin, Users } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
-import { SportIcon } from '@/components/shared/SportIcon'
+import { SportCover } from '@/components/shared/SportCover'
 import { GroupsEventsTabs } from '@/components/shared/GroupsEventsTabs'
 import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
@@ -47,7 +47,7 @@ export function DiscoverEventsClient({ events, error }: { events: PublicEventCar
             <Link key={event.id} href={`/e/${event.id}`}>
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 hover:border-slate-700 transition-all active:scale-[0.99]">
                 <div className="flex items-start gap-3 mb-3">
-                  <SportIcon sport={event.sport as SportId} size="sm" />
+                  <SportCover sport={event.sport as SportId} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-100 truncate">{event.title}</p>
                     <p className="text-xs text-slate-400 capitalize mt-0.5 flex items-center gap-1.5">

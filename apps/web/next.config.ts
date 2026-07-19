@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '*.supabase.co',             // Supabase Storage
       },
+      {
+        protocol: 'https',
+        hostname: 'images.pexels.com',         // Capas por esporte (hotlink, sem hospedar)
+      },
     ],
   },
 };

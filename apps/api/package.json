@@ -11,18 +11,31 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
+    "test": "jest",
     "test:smoke": "ts-node test/smoke.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    }
+  },
   "dependencies": {
     "@nestjs/common": "^11.1.6",
-    "@playgroup/logger": "workspace:*",
-    "@playgroup/types": "workspace:*",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.1.6",
     "@nestjs/platform-express": "^11.1.6",
+    "@playgroup/logger": "workspace:*",
+    "@playgroup/types": "workspace:*",
     "@prisma/client": "^6.17.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
@@ -35,8 +48,11 @@
     "@nestjs/schematics": "^11.0.7",
     "@playgroup/typescript-config": "workspace:*",
     "@types/express": "^5.0.5",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.19.1",
+    "jest": "^30.4.2",
     "prisma": "^6.17.2",
+    "ts-jest": "^29.4.11",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

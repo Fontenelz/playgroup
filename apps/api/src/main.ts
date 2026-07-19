@@ -1,8 +1,11 @@
 import 'reflect-metadata'
-import { Logger, ValidationPipe } from '@nestjs/common'
+import { ValidationPipe } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
+import { createLogger } from '@playgroup/logger'
 import { AppModule } from './app.module'
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
+
+const logger = createLogger('bootstrap')
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
@@ -28,14 +31,13 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 3333
   await app.listen(port)
-  console.log(`playgroup api listening on http://localhost:${port}`)
+  logger.info(`playgroup api listening on http://localhost:${port}`)
 }
 
 bootstrap().catch((error) => {
-  Logger.error(
-    'Falha ao iniciar a aplicação — verifique as variáveis de ambiente',
-    error?.stack ?? error,
-    'Bootstrap',
-  )
+  logger.error('Falha ao iniciar a aplicação — verifique as variáveis de ambiente', {
+    stack: error?.stack,
+    error,
+  })
   process.exit(1)
 })

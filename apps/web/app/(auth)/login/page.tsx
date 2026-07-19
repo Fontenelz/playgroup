@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Mail, Eye, EyeOff, UserPlus } from 'lucide-react'
+import { Logo } from '@/components/shared/Logo'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail } from '@/lib/actions/auth'
@@ -85,9 +86,11 @@ function LoginForm() {
         className="flex flex-col items-center mb-12"
       >
         <div className="size-20 rounded-3xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center mb-4">
-          <span className="text-4xl">🏆</span>
+          <Logo size="lg" showText={false} />
         </div>
-        <h1 className="text-3xl font-bold text-slate-100">PlayGroup</h1>
+        <h1 className="text-3xl font-bold">
+          <span className="text-slate-50">Play</span><span className="text-primary-500">Group</span>
+        </h1>
         <p className="text-sm text-slate-400 mt-1 text-center max-w-xs">
           Organize qualquer esporte sem listas no WhatsApp
         </p>

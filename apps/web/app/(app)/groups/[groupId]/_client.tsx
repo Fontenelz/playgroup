@@ -6,13 +6,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Settings, Share2, Star, ChevronRight, Copy, Check, Link2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Header } from '@/components/layout/Header'
+import { SportCover } from '@/components/shared/SportCover'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { createInviteCode } from '@/lib/actions/groups'
-import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, formatCurrency, cn, copyToClipboard } from '@/lib/utils'
 
@@ -87,7 +87,6 @@ export default function GroupPageClient({
   const [tab, setTab] = useState<Tab>('events')
   const [shareOpen, setShareOpen] = useState(false)
 
-  const sport = SPORT_MAP[group.sport as SportId]
   const isAdmin = myRole === 'admin'
   const isOrganizer = myRole === 'admin' || myRole === 'organizer'
 
@@ -123,12 +122,13 @@ export default function GroupPageClient({
 
       {/* Group hero */}
       <div className="px-4 pb-4 pt-1">
-        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-5">
-          <div className="absolute inset-0 opacity-5 text-[120px] flex items-center justify-end pr-4 select-none pointer-events-none">
-            {sport?.emoji}
+        <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-800">
+          <div className="relative h-28">
+            <SportCover sport={group.sport as SportId} size="banner" className="absolute inset-0" priority />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent" />
+            <SportIcon sport={group.sport as SportId} size="sm" className="absolute bottom-2 left-4 ring-2 ring-slate-900" />
           </div>
-          <div className="relative">
-            <SportIcon sport={group.sport as SportId} size="lg" className="mb-3" />
+          <div className="p-5 pt-3">
             <h1 className="text-xl font-bold text-slate-100 leading-tight">{group.name}</h1>
             {group.description && (
               <p className="text-sm text-slate-400 mt-1">{group.description}</p>
@@ -186,6 +186,7 @@ export default function GroupPageClient({
               upcoming={upcoming}
               past={past}
               groupId={group.id}
+              sport={group.sport}
               isOrganizer={isOrganizer}
             />
           )}
@@ -204,11 +205,12 @@ export default function GroupPageClient({
 // ─── Events Tab ────────────────────────────────────────────────────────────────
 
 function EventsTab({
-  upcoming, past, groupId, isOrganizer,
+  upcoming, past, groupId, sport, isOrganizer,
 }: {
   upcoming: EventItem[]
   past: EventItem[]
   groupId: string
+  sport: string
   isOrganizer: boolean
 }) {
   return (
@@ -232,7 +234,7 @@ function EventsTab({
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider my-3">Próximos</p>
           <div className="space-y-3">
             {upcoming.map((event, i) => (
-              <EventCard key={event.id} event={event} groupId={groupId} index={i} />
+              <EventCard key={event.id} event={event} groupId={groupId} sport={sport} index={i} />
             ))}
           </div>
         </section>
@@ -271,7 +273,14 @@ function EventsTab({
   )
 }
 
-function EventCard({ event, groupId, index }: { event: EventItem; groupId: string; index: number }) {
+function EventCard({
+  event, groupId, sport, index,
+}: {
+  event: EventItem
+  groupId: string
+  sport: string
+  index: number
+}) {
   const slots = event.max_participants - event.participant_count
   const fill = event.participant_count / event.max_participants
 
@@ -297,16 +306,19 @@ function EventCard({ event, groupId, index }: { event: EventItem; groupId: strin
           event.my_status === 'confirmed' ? 'border-primary-500/30' : 'border-slate-800',
         )}>
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-base font-semibold text-slate-100">
-                {formatDate(event.starts_at, { weekday: 'short', day: '2-digit', month: '2-digit' })}
-              </p>
-              <p className="text-sm text-slate-400 mt-0.5">
-                {formatTime(event.starts_at)} – {formatTime(event.ends_at)}
-              </p>
-              {event.location_name && (
-                <p className="text-xs text-slate-500 mt-1">📍 {event.location_name}</p>
-              )}
+            <div className="flex items-start gap-3">
+              <SportCover sport={sport as SportId} size="sm" />
+              <div>
+                <p className="text-base font-semibold text-slate-100">
+                  {formatDate(event.starts_at, { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                </p>
+                <p className="text-sm text-slate-400 mt-0.5">
+                  {formatTime(event.starts_at)} – {formatTime(event.ends_at)}
+                </p>
+                {event.location_name && (
+                  <p className="text-xs text-slate-500 mt-1">📍 {event.location_name}</p>
+                )}
+              </div>
             </div>
             {myStatusCfg && (
               <Badge variant={myStatusCfg.badge} size="sm">{myStatusCfg.label}</Badge>

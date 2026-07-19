@@ -7,7 +7,7 @@ import { Bell, Plus, ChevronRight, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
-import { SportIcon } from '@/components/shared/SportIcon'
+import { SportCover } from '@/components/shared/SportCover'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, cn } from '@/lib/utils'
 import { confirmParticipation, declineParticipation } from '@/lib/actions/events'
@@ -147,7 +147,7 @@ export default function HomeClient({ user, groups, events, notifications, unread
                       status === 'confirmed' ? 'border-primary-500/30' : 'border-slate-800 hover:border-slate-700',
                     )}>
                       <div className="flex items-start gap-3 mb-3">
-                        <SportIcon sport={event.sport as SportId} size="sm" />
+                        <SportCover sport={event.sport as SportId} size="sm" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-slate-100 truncate">
                             {event.group_name ?? 'Evento avulso'}
@@ -227,7 +227,7 @@ export default function HomeClient({ user, groups, events, notifications, unread
                 animate={{ opacity: 1, scale: 1 }}
                 className="flex-shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 w-44 hover:border-slate-700 transition-all active:scale-95"
               >
-                <SportIcon sport={group.sport as SportId} size="md" className="mb-3" />
+                <SportCover sport={group.sport as SportId} size="md" className="mb-3" />
                 <p className="text-xs font-semibold text-slate-200 leading-snug line-clamp-2 mb-1">{group.name}</p>
                 <p className="text-[11px] text-slate-500">{group.member_count} membros</p>
                 {group.my_role === 'admin' && (

@@ -7,6 +7,7 @@ import { ChevronLeft, Shuffle, RefreshCw, Users, Star, ChevronDown, ChevronUp } 
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { SelectCardGroup } from '@/components/ui/SelectCard'
+import { balancedDraw, type DrawPlayer, randomDraw, SKILL_SCORE } from '@/lib/draw'
 import { cn } from '@/lib/utils'
 import type { SkillLevel } from '@/types/app.types'
 
@@ -30,13 +31,6 @@ interface SortearClientProps {
 type DrawMethod = 'random' | 'balanced'
 type TeamCount = '2' | '3' | '4'
 
-const SKILL_SCORE: Record<SkillLevel, number> = {
-  beginner:     1,
-  intermediate: 2,
-  advanced:     3,
-  professional: 4,
-}
-
 const TEAM_COLORS = [
   { bg: 'bg-emerald-500', ring: 'ring-emerald-500', text: 'text-emerald-400', light: 'bg-emerald-500/15', name: 'Time Verde' },
   { bg: 'bg-amber-500',   ring: 'ring-amber-500',   text: 'text-amber-400',   light: 'bg-amber-500/15',   name: 'Time Laranja' },
@@ -44,31 +38,7 @@ const TEAM_COLORS = [
   { bg: 'bg-rose-500',    ring: 'ring-rose-500',    text: 'text-rose-400',    light: 'bg-rose-500/15',    name: 'Time Vermelho' },
 ]
 
-interface Player {
-  userId: string
-  name: string
-  nickname: string
-  avatarUrl?: string | null
-  skill: SkillLevel
-  teamIndex: number | null
-}
-
-function balancedDraw(players: Player[], numTeams: number): Player[] {
-  const sorted = [...players].sort((a, b) => SKILL_SCORE[b.skill] - SKILL_SCORE[a.skill])
-  const scores = Array(numTeams).fill(0) as number[]
-  return sorted.map((p, i) => {
-    const teamIdx = i < numTeams
-      ? i
-      : scores.indexOf(Math.min(...scores))
-    scores[teamIdx] += SKILL_SCORE[p.skill]
-    return { ...p, teamIndex: teamIdx }
-  })
-}
-
-function randomDraw(players: Player[], numTeams: number): Player[] {
-  const shuffled = [...players].sort(() => Math.random() - 0.5)
-  return shuffled.map((p, i) => ({ ...p, teamIndex: i % numTeams }))
-}
+type Player = DrawPlayer
 
 // ─── Main component ──────────────────────────────────────────────────────────────
 

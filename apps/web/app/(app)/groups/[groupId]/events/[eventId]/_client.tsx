@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Avatar, AvatarGroup } from '@/components/ui/Avatar'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { WaitlistRow } from '@/components/shared/ParticipantRow'
+import { SportCover } from '@/components/shared/SportCover'
 import { SportIcon } from '@/components/shared/SportIcon'
 import {
   confirmParticipation,
@@ -266,9 +267,13 @@ export default function EventPageClient({
 
         {/* Event hero card */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden">
-          <div className="p-5">
+          <div className="relative h-32">
+            <SportCover sport={event.sport as SportId} size="banner" className="absolute inset-0" priority />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
+          </div>
+          <div className="p-5 pt-3">
             <div className="flex items-start gap-3 mb-4">
-              <SportIcon sport={event.sport as SportId} size="md" />
+              <SportIcon sport={event.sport as SportId} size="md" className="-mt-9 ring-2 ring-slate-900" />
               <div className="flex-1 min-w-0">
                 <h1 className="text-lg font-bold text-slate-100 leading-tight">{group.name}</h1>
                 <div className="flex items-center gap-1.5 mt-1">

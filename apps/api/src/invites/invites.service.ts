@@ -9,7 +9,7 @@ export class InvitesService {
     private readonly authz: AuthzService,
   ) {}
 
-  async preview(code: string, userId: string) {
+  async preview(code: string, userId?: string) {
     const invite = await this.prisma.inviteCode.findUnique({ where: { code } })
 
     const invalid =
@@ -38,7 +38,7 @@ export class InvitesService {
 
     const [memberCount, isMember, members] = await Promise.all([
       this.prisma.groupMember.count({ where: { groupId: group.id, status: 'active' } }),
-      this.authz.isGroupMember(group.id, userId),
+      userId ? this.authz.isGroupMember(group.id, userId) : Promise.resolve(false),
       this.prisma.groupMember.findMany({
         where: { groupId: group.id, status: 'active' },
         orderBy: { joinedAt: 'asc' },

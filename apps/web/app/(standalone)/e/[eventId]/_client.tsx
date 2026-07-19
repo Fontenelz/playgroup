@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
+import { SportCover } from '@/components/shared/SportCover'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { confirmAsGuest } from '@/lib/actions/events'
 import { SPORT_MAP } from '@/lib/constants'
@@ -124,6 +125,12 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto">
 
+      {/* Cover */}
+      <div className="relative h-40 flex-shrink-0">
+        <SportCover sport={event.sport as SportId} size="banner" className="absolute inset-0" priority />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent" />
+      </div>
+
       <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/60 px-4 py-4">
         <div className="flex items-center gap-3">
           <Link
@@ -141,7 +148,7 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center text-center gap-4 pt-4"
+          className="flex flex-col items-center text-center gap-4"
         >
           <SportIcon sport={event.sport as SportId} size="lg" />
           <div>
