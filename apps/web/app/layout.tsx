@@ -10,11 +10,27 @@ const inter = Inter({
   display: 'swap',
 })
 
+const title = 'PlayGroup — Organize qualquer esporte sem listas no WhatsApp'
+const description = 'Confirme presenças, gerencie pagamentos, sorteie times e acompanhe rankings no seu grupo esportivo.'
+
 export const metadata: Metadata = {
-  title: 'PlayGroup — Organize qualquer esporte sem listas no WhatsApp',
-  description: 'Confirme presenças, gerencie pagamentos, sorteie times e acompanhe rankings no seu grupo esportivo.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
+  title,
+  description,
   manifest: '/manifest.json',
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'PlayGroup' },
+  openGraph: {
+    title,
+    description,
+    siteName: 'PlayGroup',
+    locale: 'pt_BR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title,
+    description,
+  },
 }
 
 export const viewport: Viewport = {

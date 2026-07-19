@@ -1,6 +1,9 @@
-import { redirect } from 'next/navigation'
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { api } from '@/lib/api/client'
+import { SPORT_MAP } from '@/lib/constants'
+import type { SportId } from '@/lib/constants'
+import { getSportCoverUrl } from '@/lib/sport-images'
 import JoinGroupClient, { InvalidCodeView } from './_client'
 import type { JoinGroup, JoinMember } from './_client'
 
@@ -19,6 +22,35 @@ interface InvitePreviewResponse {
   members?: { id: string; role: string; user: { id: string; name: string; nickname: string | null; avatar_url: string | null } }[]
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string }>
+}): Promise<Metadata> {
+  const { code: rawCode } = await params
+  const code = decodeURIComponent(rawCode)
+
+  const preview = await api
+    .get<InvitePreviewResponse>(`/invites/${encodeURIComponent(code)}`)
+    .catch(() => null)
+
+  if (!preview?.is_valid || !preview.group_id) {
+    return { title: 'Convite inválido — PlayGroup' }
+  }
+
+  const sport = SPORT_MAP[preview.sport as SportId] ?? SPORT_MAP.other
+  const title = `${preview.group_name} — Convite no PlayGroup`
+  const description = `${sport.emoji} ${sport.label} · ${preview.member_count ?? 0} membros. Entre no grupo pelo PlayGroup.`
+  const image = getSportCoverUrl(preview.sport as SportId, 1200)
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, images: [{ url: image, width: 1200, height: 900 }] },
+    twitter: { card: 'summary_large_image', title, description, images: [image] },
+  }
+}
+
 export default async function JoinGroupPage({
   params,
 }: {
@@ -28,8 +60,9 @@ export default async function JoinGroupPage({
   const code = decodeURIComponent(rawCode)
   const supabase = await createClient()
 
+  // Preview funciona sem login (bots de link-preview e visitantes anônimos);
+  // login só é exigido na ação de entrar no grupo.
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect(`/login?next=${encodeURIComponent(`/join/${rawCode}`)}`)
 
   const preview = await api.get<InvitePreviewResponse>(`/invites/${encodeURIComponent(code)}`).catch(() => null)
 
@@ -61,6 +94,7 @@ export default async function JoinGroupPage({
       memberCount={preview.member_count ?? 0}
       members={members}
       isMember={preview.is_member ?? false}
+      isLoggedIn={!!user}
     />
   )
 }
