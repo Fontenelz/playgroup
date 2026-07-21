@@ -26,6 +26,7 @@ export interface CreateGroupDto {
   monthlyFee?: number
   perEventFee?: number
   paymentDay?: number
+  paymentDeadlineHours?: number
 }
 
 @Injectable()
@@ -145,6 +146,7 @@ export class GroupsService {
         monthlyFee: dto.monthlyFee ?? null,
         perEventFee: dto.perEventFee ?? null,
         paymentDay: dto.paymentDay ?? null,
+        paymentDeadlineHours: dto.paymentDeadlineHours ?? null,
       },
     })
 
@@ -176,6 +178,7 @@ export class GroupsService {
             monthlyFee: true,
             perEventFee: true,
             paymentDay: true,
+            paymentDeadlineHours: true,
             plan: true,
             adminId: true,
             accessType: true,
@@ -305,6 +308,7 @@ export class GroupsService {
         monthly_fee: group.monthlyFee,
         per_event_fee: group.perEventFee,
         payment_day: group.paymentDay,
+        payment_deadline_hours: group.paymentDeadlineHours,
         plan: group.plan,
         admin_id: group.adminId,
         access_type: group.accessType,
@@ -382,7 +386,7 @@ export class GroupsService {
   async requestToJoin(groupId: string, userId: string) {
     const group = await this.prisma.group.findUnique({
       where: { id: groupId },
-      select: { id: true, deletedAt: true, accessType: true },
+      select: { id: true, name: true, deletedAt: true, accessType: true },
     })
     if (!group || group.deletedAt) throw new NotFoundException('Grupo não encontrado')
     if (group.accessType !== 'public') {
@@ -405,6 +409,7 @@ export class GroupsService {
       create: { groupId, userId, status: 'pending' },
       update: { status: 'pending' },
     })
+    await this.notifyOrganizersOfJoinRequest(groupId, userId, group.name)
     return { status: 'pending' }
   }
 
@@ -422,6 +427,20 @@ export class GroupsService {
       where: { id: membership.id },
       data: { status: 'active', joinedAt: new Date() },
     })
+
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { name: true },
+    })
+    await this.prisma.notification.create({
+      data: {
+        userId: targetUserId,
+        type: 'group_join_approved',
+        title: '🎉 Solicitação aprovada',
+        body: `Você agora faz parte de "${group?.name ?? 'grupo'}".`,
+        data: { groupId },
+      },
+    })
     return { status: 'ok' }
   }
 
@@ -436,7 +455,50 @@ export class GroupsService {
     }
 
     await this.prisma.groupMember.delete({ where: { id: membership.id } })
+
+    const group = await this.prisma.group.findUnique({
+      where: { id: groupId },
+      select: { name: true },
+    })
+    await this.prisma.notification.create({
+      data: {
+        userId: targetUserId,
+        type: 'group_join_rejected',
+        title: '❌ Solicitação recusada',
+        body: `Sua solicitação para entrar em "${group?.name ?? 'grupo'}" foi recusada.`,
+        data: { groupId },
+      },
+    })
     return { status: 'ok' }
+  }
+
+  private async notifyOrganizersOfJoinRequest(
+    groupId: string,
+    requesterId: string,
+    groupName: string,
+  ) {
+    const [organizers, requester] = await Promise.all([
+      this.prisma.groupMember.findMany({
+        where: { groupId, status: 'active', role: { in: ['admin', 'organizer'] } },
+        select: { userId: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: requesterId },
+        select: { name: true, nickname: true },
+      }),
+    ])
+    if (organizers.length === 0 || !requester) return
+
+    const requesterName = requester.nickname ?? requester.name.split(' ')[0]
+    await this.prisma.notification.createMany({
+      data: organizers.map((o) => ({
+        userId: o.userId,
+        type: 'group_join_request',
+        title: '🙋 Nova solicitação de entrada',
+        body: `${requesterName} quer entrar em "${groupName}".`,
+        data: { groupId },
+      })),
+    })
   }
 
   async removeMember(groupId: string, actingUserId: string, targetUserId: string) {

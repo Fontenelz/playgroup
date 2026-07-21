@@ -30,6 +30,7 @@ export interface GroupDetail {
   monthly_fee?: number | null
   per_event_fee?: number | null
   payment_day?: number | null
+  payment_deadline_hours?: number | null
   plan: string
   admin_id: string
   access_type: string
@@ -518,21 +519,28 @@ function MembersTab({
       )}
 
       {group.monthly_fee && (
-        <Card className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-slate-500">Mensalidade</p>
-            <p className="text-lg font-bold text-slate-100">{formatCurrency(group.monthly_fee)}</p>
+        <Card className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-slate-500">Mensalidade</p>
+              <p className="text-lg font-bold text-slate-100">{formatCurrency(group.monthly_fee)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Vence todo dia</p>
+              <p className="text-lg font-bold text-slate-100">{group.payment_day}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Avulso</p>
+              <p className="text-lg font-bold text-slate-100">
+                {group.per_event_fee ? formatCurrency(group.per_event_fee) : '—'}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-slate-500">Vence todo dia</p>
-            <p className="text-lg font-bold text-slate-100">{group.payment_day}</p>
-          </div>
-          <div>
-            <p className="text-xs text-slate-500">Avulso</p>
-            <p className="text-lg font-bold text-slate-100">
-              {group.per_event_fee ? formatCurrency(group.per_event_fee) : '—'}
+          {!!group.payment_deadline_hours && (
+            <p className="text-xs text-slate-500 border-t border-slate-800 pt-2">
+              ⏰ Avulso tem até <span className="text-slate-300 font-medium">{group.payment_deadline_hours}h antes do evento</span> pra pagar, senão a vaga é liberada automaticamente.
             </p>
-          </div>
+          )}
         </Card>
       )}
 

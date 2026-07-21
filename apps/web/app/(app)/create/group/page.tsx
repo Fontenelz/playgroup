@@ -32,6 +32,7 @@ interface GroupForm {
   perEventFee: string
   useFee:      boolean
   paymentDay:  string
+  paymentDeadlineHours: number
 }
 
 const STEP_LABELS = ['Esporte', 'Sobre', 'Vagas', 'Revisão']
@@ -77,6 +78,7 @@ export default function CreateGroupPage() {
     perEventFee: '15',
     useFee:      true,
     paymentDay:  '5',
+    paymentDeadlineHours: 24,
   })
 
   const set = useCallback(<K extends keyof GroupForm>(key: K, val: GroupForm[K]) => {
@@ -113,6 +115,7 @@ export default function CreateGroupPage() {
         monthlyFee:  form.monthlyFee,
         perEventFee: form.perEventFee,
         paymentDay:  form.paymentDay,
+        paymentDeadlineHours: form.useFee ? form.paymentDeadlineHours : 0,
       })
       if (result?.error) toast.error(result.error)
     })
@@ -401,6 +404,22 @@ function StepSlots({
             hint="Cobrado de avulsos por participação."
           />
 
+          {perEventFeeNum > 0 && (
+            <NumberStepper
+              label="Prazo de pagamento (horas antes do evento)"
+              value={form.paymentDeadlineHours}
+              onChange={(v) => set('paymentDeadlineHours', v)}
+              min={0}
+              max={168}
+              step={1}
+              hint={
+                form.paymentDeadlineHours > 0
+                  ? `Avulso que não pagar até ${form.paymentDeadlineHours}h antes do jogo perde a vaga automaticamente.`
+                  : '0 = sem prazo (vaga de avulso não paga não é liberada automaticamente).'
+              }
+            />
+          )}
+
           {/* Payment day */}
           <div className="space-y-2">
             <p className="text-sm font-medium text-slate-300">Dia de vencimento</p>
@@ -497,6 +516,13 @@ function StepReview({
         )}
         {form.useFee && perEventFeeNum > 0 && (
           <ReviewRow icon="🎟️" label="Avulso" value={`${formatCurrency(perEventFeeNum)}/evento`} />
+        )}
+        {form.useFee && perEventFeeNum > 0 && form.paymentDeadlineHours > 0 && (
+          <ReviewRow
+            icon="⏰"
+            label="Prazo de pagamento"
+            value={`${form.paymentDeadlineHours}h antes do evento, senão perde a vaga`}
+          />
         )}
         {!form.useFee && (
           <ReviewRow icon="💸" label="Financeiro" value="Sem cobranças" />

@@ -148,6 +148,7 @@ export class EventsService {
     if (eventKind.groupId) {
       // Garante que reservas de fila vencidas já tenham liberado a vaga antes de montar a resposta.
       await this.sweepExpiredWaitlist(eventId)
+      await this.sweepUnpaidConfirmations(eventId)
     }
 
     const event = await this.prisma.event.findUnique({ where: { id: eventId } })
@@ -362,6 +363,7 @@ export class EventsService {
     }
 
     await this.sweepExpiredWaitlist(eventId)
+    await this.sweepUnpaidConfirmations(eventId)
 
     const entry = await this.prisma.waitlist.findUnique({
       where: { eventId_userId: { eventId, userId } },
@@ -390,6 +392,7 @@ export class EventsService {
     }
 
     await this.sweepExpiredWaitlist(eventId)
+    await this.sweepUnpaidConfirmations(eventId)
 
     const entry = await this.prisma.waitlist.findUnique({
       where: { eventId_userId: { eventId, userId } },
@@ -411,6 +414,7 @@ export class EventsService {
   /** Confirma direto se há vaga, senão entra (ou permanece) na fila de espera. Idempotente. */
   private async confirmOrJoinWaitlist(eventId: string, userId: string) {
     await this.sweepExpiredWaitlist(eventId)
+    await this.sweepUnpaidConfirmations(eventId)
 
     const [event, existingParticipant, existingWaitlist] = await Promise.all([
       this.prisma.event.findUnique({
@@ -457,6 +461,74 @@ export class EventsService {
     for (const entry of expired) {
       await this.prisma.waitlist.update({ where: { id: entry.id }, data: { status: 'expired' } })
       await this.releaseReservedSlot(eventId)
+      await this.promoteNextWaitlistEntry(eventId)
+    }
+  }
+
+  /**
+   * Reverte pra pendente quem confirmou mas não é mensalista e não pagou até o
+   * prazo configurado no grupo (Group.paymentDeadlineHours, opt-in — grupo sem
+   * esse campo ou sem cobrança por evento não é afetado). A vaga liberada é
+   * repassada pro próximo da fila de espera, igual a uma recusa.
+   */
+  private async sweepUnpaidConfirmations(eventId: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        groupId: true,
+        startsAt: true,
+        eventFee: true,
+        group: { select: { paymentDeadlineHours: true, perEventFee: true } },
+      },
+    })
+    if (!event?.groupId || !event.group?.paymentDeadlineHours) return
+
+    const fee = Number(event.eventFee ?? event.group.perEventFee ?? 0)
+    if (fee <= 0) return
+
+    const deadline = new Date(
+      event.startsAt.getTime() - event.group.paymentDeadlineHours * 60 * 60 * 1000,
+    )
+    if (deadline > new Date()) return
+
+    const confirmed = await this.prisma.eventParticipant.findMany({
+      where: { eventId, status: 'confirmed' },
+      select: { userId: true },
+    })
+    if (confirmed.length === 0) return
+
+    const userIds = confirmed.map((p) => p.userId)
+    const [members, paidPayments] = await Promise.all([
+      this.prisma.groupMember.findMany({
+        where: { groupId: event.groupId, userId: { in: userIds }, status: 'active' },
+        select: { userId: true, memberType: true },
+      }),
+      this.prisma.payment.findMany({
+        where: { eventId, userId: { in: userIds }, status: 'paid' },
+        select: { userId: true },
+      }),
+    ])
+    const memberTypeByUser = new Map(members.map((m) => [m.userId, m.memberType]))
+    const paidUserIds = new Set(paidPayments.map((p) => p.userId))
+
+    for (const userId of userIds) {
+      if (memberTypeByUser.get(userId) === 'monthly') continue
+      if (paidUserIds.has(userId)) continue
+
+      await this.upsertParticipant(eventId, userId, 'pending', null)
+      await this.prisma.payment.updateMany({
+        where: { eventId, userId, status: { not: 'paid' } },
+        data: { status: 'overdue' },
+      })
+      await this.prisma.notification.create({
+        data: {
+          userId,
+          type: 'payment_deadline_missed',
+          title: 'Vaga liberada por falta de pagamento',
+          body: 'Sua confirmação foi movida pra pendente porque o pagamento não foi identificado até o prazo.',
+          data: { eventId },
+        },
+      })
       await this.promoteNextWaitlistEntry(eventId)
     }
   }
@@ -596,6 +668,7 @@ export class EventsService {
     if (!event) throw new NotFoundException('Evento não encontrado')
     if (!event.groupId) throw new NotFoundException('Este evento não possui financeiro')
     await this.authz.assertGroupOrganizer(event.groupId, userId)
+    await this.sweepUnpaidConfirmations(eventId)
 
     const fee = Number(event.eventFee ?? event.group?.perEventFee ?? 0)
 

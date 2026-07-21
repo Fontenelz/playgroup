@@ -13,6 +13,7 @@ export interface CreateGroupInput {
   monthlyFee: string
   perEventFee: string
   paymentDay: string
+  paymentDeadlineHours: number
 }
 
 export async function createGroup(input: CreateGroupInput) {
@@ -34,6 +35,7 @@ export async function createGroup(input: CreateGroupInput) {
       monthlyFee: parseFloat(input.monthlyFee) || undefined,
       perEventFee: parseFloat(input.perEventFee) || undefined,
       paymentDay: parseInt(input.paymentDay) || undefined,
+      paymentDeadlineHours: input.paymentDeadlineHours || undefined,
     })
   } catch (err) {
     if (err instanceof ApiError) return { error: err.message }

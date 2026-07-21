@@ -113,37 +113,38 @@ model User {
   createdAt  DateTime   @default(now()) @map("created_at")
   updatedAt  DateTime   @updatedAt @map("updated_at")
 
-  adminOfGroups       Group[]             @relation("GroupAdmin")
+  adminOfGroups       Group[]            @relation("GroupAdmin")
   memberships         GroupMember[]
   createdInviteCodes  InviteCode[]
-  createdEvents       Event[]             @relation("EventCreator")
+  createdEvents       Event[]            @relation("EventCreator")
   eventParticipations EventParticipant[]
   waitlistEntries     Waitlist[]
-  payments            Payment[]           @relation("PaymentUser")
-  paymentsMade        Payment[]           @relation("PaymentPaidBy")
+  payments            Payment[]          @relation("PaymentUser")
+  paymentsMade        Payment[]          @relation("PaymentPaidBy")
   notifications       Notification[]
 
   @@map("users")
 }
 
 model Group {
-  id            String          @id @default(uuid()) @db.Uuid
-  name          String
-  slug          String          @unique
-  description   String?
-  sport         String
-  coverUrl      String?         @map("cover_url")
-  adminId       String          @map("admin_id") @db.Uuid
-  accessType    GroupAccessType @default(invite) @map("access_type")
-  maxMembers    Int             @default(20) @map("max_members")
-  monthlyFee    Decimal?        @map("monthly_fee") @db.Decimal(10, 2)
-  perEventFee   Decimal?        @map("per_event_fee") @db.Decimal(10, 2)
-  paymentDay    Int?            @map("payment_day")
-  pixKey        String?         @map("pix_key")
-  plan          GroupPlan       @default(free)
-  deletedAt     DateTime?       @map("deleted_at")
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  id                   String          @id @default(uuid()) @db.Uuid
+  name                 String
+  slug                 String          @unique
+  description          String?
+  sport                String
+  coverUrl             String?         @map("cover_url")
+  adminId              String          @map("admin_id") @db.Uuid
+  accessType           GroupAccessType @default(invite) @map("access_type")
+  maxMembers           Int             @default(20) @map("max_members")
+  monthlyFee           Decimal?        @map("monthly_fee") @db.Decimal(10, 2)
+  perEventFee          Decimal?        @map("per_event_fee") @db.Decimal(10, 2)
+  paymentDay           Int?            @map("payment_day")
+  paymentDeadlineHours Int?            @map("payment_deadline_hours")
+  pixKey               String?         @map("pix_key")
+  plan                 GroupPlan       @default(free)
+  deletedAt            DateTime?       @map("deleted_at")
+  createdAt            DateTime        @default(now()) @map("created_at")
+  updatedAt            DateTime        @updatedAt @map("updated_at")
 
   admin       User          @relation("GroupAdmin", fields: [adminId], references: [id])
   members     GroupMember[]
@@ -155,15 +156,15 @@ model Group {
 }
 
 model GroupMember {
-  id           String       @id @default(uuid()) @db.Uuid
-  groupId      String       @map("group_id") @db.Uuid
-  userId       String       @map("user_id") @db.Uuid
-  role         MemberRole   @default(participant)
-  memberType   MemberType   @default(regular) @map("member_type")
-  status       MemberStatus @default(active)
-  monthlySlot  Boolean      @default(false) @map("monthly_slot")
-  skillRating  Int          @default(3) @map("skill_rating")
-  joinedAt     DateTime     @default(now()) @map("joined_at")
+  id          String       @id @default(uuid()) @db.Uuid
+  groupId     String       @map("group_id") @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  role        MemberRole   @default(participant)
+  memberType  MemberType   @default(regular) @map("member_type")
+  status      MemberStatus @default(active)
+  monthlySlot Boolean      @default(false) @map("monthly_slot")
+  skillRating Int          @default(3) @map("skill_rating")
+  joinedAt    DateTime     @default(now()) @map("joined_at")
 
   group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -228,17 +229,17 @@ model Event {
 }
 
 model EventParticipant {
-  id            String            @id @default(uuid()) @db.Uuid
-  eventId       String            @map("event_id") @db.Uuid
-  userId        String            @map("user_id") @db.Uuid
-  status        ParticipantStatus @default(pending)
-  isMonthly     Boolean           @default(false) @map("is_monthly")
-  confirmedAt   DateTime?         @map("confirmed_at")
-  goals         Int               @default(0)
-  assists       Int               @default(0)
-  isLateCancel  Boolean           @default(false) @map("is_late_cancel")
-  paymentId     String?           @map("payment_id") @db.Uuid
-  createdAt     DateTime          @default(now()) @map("created_at")
+  id           String            @id @default(uuid()) @db.Uuid
+  eventId      String            @map("event_id") @db.Uuid
+  userId       String            @map("user_id") @db.Uuid
+  status       ParticipantStatus @default(pending)
+  isMonthly    Boolean           @default(false) @map("is_monthly")
+  confirmedAt  DateTime?         @map("confirmed_at")
+  goals        Int               @default(0)
+  assists      Int               @default(0)
+  isLateCancel Boolean           @default(false) @map("is_late_cancel")
+  paymentId    String?           @map("payment_id") @db.Uuid
+  createdAt    DateTime          @default(now()) @map("created_at")
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -250,14 +251,14 @@ model EventParticipant {
 }
 
 model Waitlist {
-  id         String         @id @default(uuid()) @db.Uuid
-  eventId    String         @map("event_id") @db.Uuid
-  userId     String         @map("user_id") @db.Uuid
-  position   Int
-  status     WaitlistStatus @default(waiting)
-  isMonthly  Boolean        @default(false) @map("is_monthly")
-  joinedAt   DateTime       @default(now()) @map("joined_at")
-  expiresAt  DateTime?      @map("expires_at")
+  id        String         @id @default(uuid()) @db.Uuid
+  eventId   String         @map("event_id") @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  position  Int
+  status    WaitlistStatus @default(waiting)
+  isMonthly Boolean        @default(false) @map("is_monthly")
+  joinedAt  DateTime       @default(now()) @map("joined_at")
+  expiresAt DateTime?      @map("expires_at")
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -284,10 +285,10 @@ model Payment {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  group      Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user       User   @relation("PaymentUser", fields: [userId], references: [id])
-  payer      User?  @relation("PaymentPaidBy", fields: [paidBy], references: [id])
-  event      Event? @relation(fields: [eventId], references: [id])
+  group Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User   @relation("PaymentUser", fields: [userId], references: [id])
+  payer User?  @relation("PaymentPaidBy", fields: [paidBy], references: [id])
+  event Event? @relation(fields: [eventId], references: [id])
 
   @@unique([eventId, userId])
   @@index([userId])

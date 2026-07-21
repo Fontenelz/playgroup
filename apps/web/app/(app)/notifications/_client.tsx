@@ -19,6 +19,9 @@ const TYPE_CONFIG: Record<string, { bg: string; ring: string }> = {
   event_created:    { bg: 'bg-violet-500/20',   ring: 'ring-violet-500/40'   },
   event_cancelled:  { bg: 'bg-red-500/20',      ring: 'ring-red-500/40'      },
   ranking_update:   { bg: 'bg-amber-500/20',    ring: 'ring-amber-500/40'    },
+  group_join_request:  { bg: 'bg-sky-500/20',     ring: 'ring-sky-500/40'     },
+  group_join_approved: { bg: 'bg-emerald-500/20', ring: 'ring-emerald-500/40' },
+  group_join_rejected: { bg: 'bg-red-500/20',     ring: 'ring-red-500/40'     },
 }
 
 function getConfig(type: string) {
@@ -85,7 +88,9 @@ export default function NotificationsClient({ initialNotifications }: Notificati
     markRead(notif.id)
     const { groupId, eventId } = notif.data
     if (eventId && groupId) router.push(`/groups/${groupId}/events/${eventId}`)
-    else if (groupId)       router.push(`/groups/${groupId}`)
+    // Recusado não é membro — a página do grupo daria 404, manda pro preview público.
+    else if (groupId && notif.type === 'group_join_rejected') router.push(`/groups/${groupId}/preview`)
+    else if (groupId) router.push(`/groups/${groupId}`)
   }
 
   // Group by time

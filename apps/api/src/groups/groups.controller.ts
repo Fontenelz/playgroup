@@ -48,6 +48,11 @@ class CreateGroupDto {
   @IsOptional()
   @IsInt()
   paymentDay?: number
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  paymentDeadlineHours?: number
 }
 
 class UpdateMemberRoleDto {
