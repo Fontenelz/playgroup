@@ -13,7 +13,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary:   'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700 shadow-lg shadow-primary-500/20',
+  primary:   'bg-primary-500 text-slate-900 hover:bg-primary-600 active:bg-primary-700',
   secondary: 'bg-slate-700 text-slate-100 hover:bg-slate-600 active:bg-slate-500',
   ghost:     'bg-transparent text-slate-300 hover:bg-slate-800 active:bg-slate-700',
   danger:    'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30',
@@ -21,9 +21,9 @@ const variants = {
 }
 
 const sizes = {
-  sm: 'h-9 px-4 text-sm rounded-lg gap-1.5',
+  sm: 'h-9 px-4 text-sm rounded-xl gap-1.5',
   md: 'h-11 px-5 text-base rounded-xl gap-2',
-  lg: 'h-14 px-6 text-base rounded-2xl gap-2',
+  lg: 'h-14 px-6 text-base rounded-xl gap-2',
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

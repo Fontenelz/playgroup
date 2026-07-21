@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { Clock, MapPin, Users } from 'lucide-react'
-import { Header } from '@/components/layout/Header'
+import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
+import { Card } from '@/components/ui/Card'
 import { SportCover } from '@/components/shared/SportCover'
 import { GroupsEventsTabs } from '@/components/shared/GroupsEventsTabs'
 import { SPORT_MAP } from '@/lib/constants'
@@ -21,10 +22,14 @@ const STATUS_LABEL: Record<string, string> = {
 export function DiscoverEventsClient({ events, error }: { events: PublicEventCard[]; error?: string }) {
   return (
     <div>
-      <Header title="Eventos avulsos" />
+      <ScreenHeader
+        icon={<Users className="size-5" />}
+        title="Eventos avulsos"
+        subtitle="Encontre jogos públicos perto de você"
+      />
       <GroupsEventsTabs active="discover" />
 
-      <div className="px-4 py-4 space-y-3">
+      <div className="px-5 py-4 space-y-3">
         <p className="text-xs text-slate-500">
           Eventos avulsos públicos criados por outros usuários do app. Pedir pra participar exige aprovação do organizador.
         </p>
@@ -45,7 +50,7 @@ export function DiscoverEventsClient({ events, error }: { events: PublicEventCar
 
           return (
             <Link key={event.id} href={`/e/${event.id}`}>
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 hover:border-slate-700 transition-all active:scale-[0.99]">
+              <Card interactive>
                 <div className="flex items-start gap-3 mb-3">
                   <SportCover sport={event.sport as SportId} size="sm" />
                   <div className="flex-1 min-w-0">
@@ -87,7 +92,7 @@ export function DiscoverEventsClient({ events, error }: { events: PublicEventCar
                 </div>
 
                 <Badge variant="primary" size="sm" className="mt-2">{sport?.emoji} {sport?.label}</Badge>
-              </div>
+              </Card>
             </Link>
           )
         })}

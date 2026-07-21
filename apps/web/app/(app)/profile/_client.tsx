@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { LogOut, ChevronRight, Pencil } from 'lucide-react'
-import { Header } from '@/components/layout/Header'
+import { LogOut, ChevronRight, Pencil, User } from 'lucide-react'
+import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
@@ -49,16 +50,18 @@ export default function ProfileClient({
 
   return (
     <div>
-      <Header
+      <ScreenHeader
+        icon={<User className="size-5" />}
         title="Meu Perfil"
-        rightAction={
-          <Link href="/profile/edit" className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400">
+        subtitle="Acompanhe sua jornada e conquistas"
+        right={
+          <Link href="/profile/edit" className="size-10 flex items-center justify-center rounded-full bg-slate-800 border border-primary-500/40 text-primary-400 hover:border-primary-500/60 transition-colors">
             <Pencil className="size-4" />
           </Link>
         }
       />
 
-      <div className="px-4 py-6 space-y-6">
+      <div className="px-5 py-6 space-y-6">
         {/* Avatar + info */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -81,23 +84,17 @@ export default function ProfileClient({
         </motion.div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          {stats.map(({ label, value }, i) => (
-            <motion.div
-              key={label}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.07 }}
-              className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center"
-            >
-              <p className="text-2xl font-bold text-slate-100">{value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{label}</p>
-            </motion.div>
+        <Card className="p-0 grid grid-cols-3 divide-x divide-slate-700">
+          {stats.map(({ label, value }) => (
+            <div key={label} className="text-center px-2 py-4">
+              <p className="text-2xl font-bold text-primary-400">{value}</p>
+              <p className="text-[11px] uppercase text-slate-500 tracking-wider leading-tight mt-1">{label}</p>
+            </div>
           ))}
-        </div>
+        </Card>
 
         {/* Conquistas */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+        <Card className="space-y-3">
           <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Conquistas</h3>
           {[
             { emoji: '⭐', label: '6 meses seguidos', done: false },
@@ -111,7 +108,7 @@ export default function ProfileClient({
               {done && <span className="text-xs text-primary-400">✓</span>}
             </div>
           ))}
-        </div>
+        </Card>
 
         {/* Meus grupos */}
         {groups.length > 0 && (
@@ -119,11 +116,11 @@ export default function ProfileClient({
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Meus grupos</h3>
             {groups.map((group) => (
               <Link key={group.id} href={`/groups/${group.id}`}>
-                <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3 hover:border-slate-700 transition-all">
+                <Card interactive className="flex items-center gap-3 p-3 rounded-xl">
                   <SportIcon sport={group.sport as SportId} size="sm" />
                   <p className="flex-1 text-sm text-slate-200">{group.name}</p>
                   <ChevronRight className="size-4 text-slate-600" />
-                </div>
+                </Card>
               </Link>
             ))}
           </div>

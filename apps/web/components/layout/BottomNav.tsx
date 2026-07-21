@@ -26,7 +26,7 @@ export function BottomNav() {
             return (
               <Link key={href} href={href} className="flex items-center justify-center">
                 <div className="size-12 rounded-2xl bg-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/30 active:scale-95 transition-transform">
-                  <Icon className="size-5 text-white" strokeWidth={2.5} />
+                  <Icon className="size-5 text-slate-900" strokeWidth={2.5} />
                 </div>
               </Link>
             )
@@ -37,12 +37,13 @@ export function BottomNav() {
               key={href}
               href={href}
               className={cn(
-                'flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-colors min-w-[52px]',
+                'flex flex-col items-center gap-1.5 py-1 px-3 rounded-xl transition-colors min-w-[52px]',
                 active ? 'text-primary-400' : 'text-slate-500 hover:text-slate-400',
               )}
             >
               <Icon className="size-5" strokeWidth={active ? 2.5 : 2} />
               <span className="text-[10px] font-medium leading-none">{label}</span>
+              <span className={cn('h-0.5 w-4 rounded-full transition-colors', active ? 'bg-primary-400' : 'bg-transparent')} />
             </Link>
           )
         })}

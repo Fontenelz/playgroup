@@ -5,17 +5,18 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
 
-  /* Brand */
-  --color-primary-50:  #f0fdf4;
-  --color-primary-100: #dcfce7;
-  --color-primary-200: #bbf7d0;
-  --color-primary-300: #86efac;
-  --color-primary-400: #4ade80;
-  --color-primary-500: #22c55e;
-  --color-primary-600: #16a34a;
-  --color-primary-700: #15803d;
-  --color-primary-800: #166534;
-  --color-primary-900: #14532d;
+  /* Brand — ramp derivada em OKLCH (H145) a partir do verde exato do app de
+     referência (primary-500 = #4EE75F), não mais o lima amarelado antigo. */
+  --color-primary-50:  #E1FFE1;
+  --color-primary-100: #C6FCC6;
+  --color-primary-200: #A4FAA7;
+  --color-primary-300: #79F481;
+  --color-primary-400: #5FED6C;
+  --color-primary-500: #4EE75F;
+  --color-primary-600: #39C34B;
+  --color-primary-700: #279936;
+  --color-primary-800: #186A23;
+  --color-primary-900: #0B3E12;
 
   /* Accent */
   --color-accent-400: #f97316;
@@ -28,15 +29,41 @@
   --color-info:    #3b82f6;
 
   /* Surface */
-  --color-surface-1: #0f172a;
-  --color-surface-2: #1e293b;
-  --color-surface-3: #334155;
-  --color-surface-4: #475569;
+  --color-surface-1: #14191C;
+  --color-surface-2: #202528;
+  --color-surface-3: #2C3135;
+  --color-surface-4: #41494F;
+
+  /* Neutrals — ramp derivada em OKLCH (H240, cromo bem baixo) a partir dos
+     tokens exatos do app de referência: background/card/muted-foreground. */
+  --color-slate-50:  #F8F8F8;
+  --color-slate-100: #EDEFF0;
+  --color-slate-200: #D8DBDD;
+  --color-slate-300: #C1C5C8;
+  --color-slate-400: #A6ACAF;
+  --color-slate-500: #8D9398;
+  --color-slate-600: #41494F;
+  --color-slate-700: #2C3135;
+  --color-slate-800: #202528;
+  --color-slate-900: #14191C;
+  --color-slate-950: #090E11;
+
+  /* Radius — remapeado pra bater em pixels com o app de referência
+     (--radius base 0.875rem, deslocado +4/+8/+12px pros nomes xl/2xl/3xl). */
+  --radius-sm:  0.625rem;
+  --radius-md:  0.75rem;
+  --radius-lg:  0.875rem;
+  --radius-xl:  1.125rem;
+  --radius-2xl: 1.375rem;
+  --radius-3xl: 1.625rem;
 }
 
 :root {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
+  /* Fundo mais escuro que --color-slate-900 (usado pelos cards) de propósito:
+     sem essa diferença de tom, card e página ficam com a mesma cor e o card
+     só se separa do fundo por causa de uma borda de 1px — perde a elevação. */
+  --background: #090E11;
+  --foreground: #F8F8F8;
   color-scheme: dark;
 }
 
@@ -70,13 +97,13 @@ body {
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #1e293b; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #475569; }
+::-webkit-scrollbar-track { background: #202528; }
+::-webkit-scrollbar-thumb { background: #2C3135; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #41494F; }
 
 /* Focus ring */
 :focus-visible {
-  outline: 2px solid #22c55e;
+  outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
 }
 
@@ -102,7 +129,7 @@ body {
 .animate-fade-in   { animation: fade-in 0.2s ease-out; }
 .animate-scale-in  { animation: scale-in 0.15s ease-out; }
 .animate-shimmer   {
-  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background: linear-gradient(90deg, #202528 25%, #2C3135 50%, #202528 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }

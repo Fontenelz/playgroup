@@ -3,10 +3,12 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Bell, Plus, ChevronRight, Check, X } from 'lucide-react'
+import { Bell, Home, Plus, ChevronRight, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
+import { Card } from '@/components/ui/Card'
+import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { SportCover } from '@/components/shared/SportCover'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, cn } from '@/lib/utils'
@@ -92,27 +94,29 @@ export default function HomeClient({ user, groups, events, notifications, unread
   }
 
   return (
-    <div className="flex flex-col gap-6 px-4 pt-5 pb-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-slate-400">Olá,</p>
-          <h1 className="text-xl font-bold text-slate-100">{nickname} 👋</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/notifications" className="relative size-10 flex items-center justify-center rounded-xl hover:bg-slate-800 transition-colors">
-            <Bell className="size-5 text-slate-400" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 size-4 bg-primary-500 rounded-full text-[10px] font-bold text-white flex items-center justify-center">
-                {unreadCount}
-              </span>
-            )}
-          </Link>
-          <Link href="/profile">
-            <Avatar name={user.name} src={user.avatar_url ?? undefined} size="sm" />
-          </Link>
-        </div>
-      </div>
+    <div className="pb-4">
+      <ScreenHeader
+        icon={<Home className="size-5" />}
+        title={`Olá, ${nickname} 👋`}
+        subtitle="Pronto pro próximo jogo?"
+        right={
+          <div className="flex items-center gap-2">
+            <Link href="/notifications" className="relative size-10 flex items-center justify-center rounded-full bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors">
+              <Bell className="size-5 text-slate-400" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 size-4 bg-primary-500 rounded-full text-[10px] font-bold text-slate-900 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
+            <Link href="/profile">
+              <Avatar name={user.name} src={user.avatar_url ?? undefined} size="sm" />
+            </Link>
+          </div>
+        }
+      />
+
+      <div className="px-5 space-y-4">
 
       {/* Próximos eventos */}
       <section>
@@ -122,10 +126,10 @@ export default function HomeClient({ user, groups, events, notifications, unread
         </div>
 
         {events.length === 0 ? (
-          <div className="text-center py-8 bg-slate-900 border border-slate-800 rounded-2xl">
+          <Card className="text-center py-8">
             <p className="text-2xl mb-2">📅</p>
             <p className="text-sm text-slate-400">Nenhum evento próximo.</p>
-          </div>
+          </Card>
         ) : (
           <div className="space-y-3">
             {events.map((event, i) => {
@@ -142,9 +146,8 @@ export default function HomeClient({ user, groups, events, notifications, unread
                   transition={{ delay: i * 0.07 }}
                 >
                   <Link href={event.group_id ? `/groups/${event.group_id}/events/${event.id}` : `/e/${event.id}`}>
-                    <div className={cn(
-                      'bg-slate-900 border rounded-2xl p-4 transition-all active:scale-[0.99]',
-                      status === 'confirmed' ? 'border-primary-500/30' : 'border-slate-800 hover:border-slate-700',
+                    <Card interactive className={cn(
+                      status === 'confirmed' && 'border border-primary-500/30',
                     )}>
                       <div className="flex items-start gap-3 mb-3">
                         <SportCover sport={event.sport as SportId} size="sm" />
@@ -203,7 +206,7 @@ export default function HomeClient({ user, groups, events, notifications, unread
                           </Button>
                         </div>
                       )}
-                    </div>
+                    </Card>
                   </Link>
                 </motion.div>
               )
@@ -225,14 +228,17 @@ export default function HomeClient({ user, groups, events, notifications, unread
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex-shrink-0 bg-slate-900 border border-slate-800 rounded-2xl p-4 w-44 hover:border-slate-700 transition-all active:scale-95"
               >
-                <SportCover sport={group.sport as SportId} size="md" className="mb-3" />
-                <p className="text-xs font-semibold text-slate-200 leading-snug line-clamp-2 mb-1">{group.name}</p>
-                <p className="text-[11px] text-slate-500">{group.member_count} membros</p>
-                {group.my_role === 'admin' && (
-                  <Badge variant="primary" size="sm" className="mt-2">Admin</Badge>
-                )}
+                <Card interactive className="flex-shrink-0 w-44 h-[172px] flex flex-col active:scale-95">
+                  <SportCover sport={group.sport as SportId} size="md" className="mb-3" />
+                  <p className="text-xs font-semibold text-slate-200 leading-snug line-clamp-2 mb-1">{group.name}</p>
+                  <p className="text-[11px] text-slate-500">{group.member_count} membros</p>
+                  <div className="mt-auto pt-2 h-5 flex items-center">
+                    {group.my_role === 'admin' && (
+                      <Badge variant="primary" size="sm">Admin</Badge>
+                    )}
+                  </div>
+                </Card>
               </motion.div>
             </Link>
           ))}
@@ -253,7 +259,7 @@ export default function HomeClient({ user, groups, events, notifications, unread
       {notifications.length > 0 && (
         <section>
           <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Atividade recente</h2>
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <Card className="p-0 overflow-hidden">
             {notifications.map((notif, i) => (
               <div key={notif.id} className={cn('flex items-start gap-3 p-4', i > 0 && 'border-t border-slate-800')}>
                 <div className="size-9 rounded-xl bg-slate-800 flex items-center justify-center text-lg flex-shrink-0" aria-hidden>
@@ -269,9 +275,10 @@ export default function HomeClient({ user, groups, events, notifications, unread
             <Link href="/notifications" className="flex items-center justify-center gap-1 p-3 border-t border-slate-800 text-xs text-slate-500 hover:text-primary-400 transition-colors">
               Ver todas as notificações <ChevronRight className="size-3" />
             </Link>
-          </div>
+          </Card>
         </section>
       )}
+      </div>
     </div>
   )
 }

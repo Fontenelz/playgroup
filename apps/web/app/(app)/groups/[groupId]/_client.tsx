@@ -12,6 +12,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { Card } from '@/components/ui/Card'
 import { createInviteCode } from '@/lib/actions/groups'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, formatCurrency, cn, copyToClipboard } from '@/lib/utils'
@@ -107,12 +108,12 @@ export default function GroupPageClient({
           <div className="flex gap-1">
             <button
               onClick={() => setShareOpen(true)}
-              className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 cursor-pointer"
+              className="size-10 flex items-center justify-center rounded-full bg-slate-800 border border-primary-500/40 text-primary-400 hover:border-primary-500/60 transition-colors cursor-pointer"
             >
               <Share2 className="size-4" />
             </button>
             {isAdmin && (
-              <Link href={`/groups/${groupId}/settings`} className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400">
+              <Link href={`/groups/${groupId}/settings`} className="size-10 flex items-center justify-center rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:border-slate-600 transition-colors">
                 <Settings className="size-4" />
               </Link>
             )}
@@ -122,7 +123,7 @@ export default function GroupPageClient({
 
       {/* Group hero */}
       <div className="px-4 pb-4 pt-1">
-        <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-800">
+        <Card className="relative p-0 overflow-hidden">
           <div className="relative h-28">
             <SportCover sport={group.sport as SportId} size="banner" className="absolute inset-0" priority />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-transparent" />
@@ -146,12 +147,12 @@ export default function GroupPageClient({
               <Badge variant="neutral" size="sm">{group.plan}</Badge>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Tabs */}
       <div className="px-4 mb-4">
-        <div className="flex gap-1 bg-slate-900 border border-slate-800 rounded-2xl p-1">
+        <Card className="flex gap-1 p-1">
           {tabs.map(({ id, label }) => (
             <button
               key={id}
@@ -159,14 +160,14 @@ export default function GroupPageClient({
               className={cn(
                 'flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all cursor-pointer',
                 tab === id
-                  ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20'
+                  ? 'bg-primary-500 text-slate-900 shadow-lg shadow-primary-500/20'
                   : 'text-slate-400 hover:text-slate-300',
               )}
             >
               {label}
             </button>
           ))}
-        </div>
+        </Card>
       </div>
 
       <InviteSheet groupId={groupId} isOpen={shareOpen} onClose={() => setShareOpen(false)} />
@@ -246,7 +247,7 @@ function EventsTab({
           <div className="space-y-2">
             {past.map((event) => (
               <Link key={event.id} href={`/groups/${groupId}/events/${event.id}`}>
-                <div className="flex items-center gap-3 py-3 px-4 bg-slate-900 border border-slate-800 rounded-xl hover:border-slate-700 transition-all">
+                <Card interactive className="flex items-center gap-3 py-3 px-4 rounded-xl">
                   <div className="size-2 rounded-full bg-slate-600 flex-shrink-0" />
                   <span className="text-sm text-slate-400 flex-1">
                     {formatDate(event.starts_at, { weekday: undefined, day: '2-digit', month: '2-digit' })}
@@ -255,7 +256,7 @@ function EventsTab({
                     {event.participant_count}/{event.max_participants}
                   </span>
                   <ChevronRight className="size-4 text-slate-600" />
-                </div>
+                </Card>
               </Link>
             ))}
           </div>
@@ -301,9 +302,9 @@ function EventCard({
       transition={{ delay: index * 0.06 }}
     >
       <Link href={`/groups/${groupId}/events/${event.id}`}>
-        <div className={cn(
-          'bg-slate-900 border rounded-2xl p-4 transition-all active:scale-[0.99] hover:border-slate-700 space-y-3',
-          event.my_status === 'confirmed' ? 'border-primary-500/30' : 'border-slate-800',
+        <Card interactive className={cn(
+          'space-y-3',
+          event.my_status === 'confirmed' && 'border border-primary-500/30',
         )}>
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-3">
@@ -348,7 +349,7 @@ function EventCard({
               📝 {event.notes}
             </p>
           )}
-        </div>
+        </Card>
       </Link>
     </motion.div>
   )
@@ -370,7 +371,7 @@ function MembersTab({
   return (
     <div className="space-y-5">
       {group.monthly_fee && (
-        <div className="flex items-center justify-between p-4 bg-slate-900 border border-slate-800 rounded-2xl">
+        <Card className="flex items-center justify-between">
           <div>
             <p className="text-xs text-slate-500">Mensalidade</p>
             <p className="text-lg font-bold text-slate-100">{formatCurrency(group.monthly_fee)}</p>
@@ -385,7 +386,7 @@ function MembersTab({
               {group.per_event_fee ? formatCurrency(group.per_event_fee) : '—'}
             </p>
           </div>
-        </div>
+        </Card>
       )}
 
       {monthly.length > 0 && (
@@ -395,22 +396,22 @@ function MembersTab({
               <Star className="size-3 text-amber-400 fill-amber-400" /> Mensalistas ({monthly.length})
             </p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <Card className="p-0 overflow-hidden">
             {monthly.map((m, i) => (
               <MemberRow key={m.id} member={m} index={i} showBorder={i > 0} currentUserId={currentUserId} />
             ))}
-          </div>
+          </Card>
         </section>
       )}
 
       {regular.length > 0 && (
         <section>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Avulsos ({regular.length})</p>
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <Card className="p-0 overflow-hidden">
             {regular.map((m, i) => (
               <MemberRow key={m.id} member={m} index={i} showBorder={i > 0} currentUserId={currentUserId} />
             ))}
-          </div>
+          </Card>
         </section>
       )}
 
@@ -575,7 +576,7 @@ function RankingTab({ ranking, currentUserId }: { ranking: RankingEntry[]; curre
 
   return (
     <div className="space-y-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+      <Card className="p-0 overflow-hidden">
         {ranking.map((entry, i) => {
           const isMe = entry.user_id === currentUserId
           const nickname = entry.user.nickname ?? entry.user.name.split(' ')[0]
@@ -607,7 +608,7 @@ function RankingTab({ ranking, currentUserId }: { ranking: RankingEntry[]; curre
             </motion.div>
           )
         })}
-      </div>
+      </Card>
     </div>
   )
 }

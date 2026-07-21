@@ -126,7 +126,7 @@ export function WaitlistRow({ position, name, avatarUrl, joinedAt, status, expir
     )}>
       <div className={cn(
         'size-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
-        position === 1 ? 'bg-primary-500 text-white' : 'bg-slate-800 text-slate-400',
+        position === 1 ? 'bg-primary-500 text-slate-900' : 'bg-slate-800 text-slate-400',
       )}>
         {position}
       </div>

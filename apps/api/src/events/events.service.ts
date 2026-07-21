@@ -49,14 +49,15 @@ export class EventsService {
     if (!group) throw new NotFoundException('Grupo não encontrado')
 
     const sportLabel = SPORT_LABELS[group.sport] ?? group.sport
-    const startsAt = new Date(`${input.date}T${input.startTime}:00`)
-    const endsAt = new Date(`${input.date}T${input.endTime}:00`)
+    const startsAt = new Date(`${input.date}T${input.startTime}:00-03:00`)
+    const endsAt = new Date(`${input.date}T${input.endTime}:00-03:00`)
     if (endsAt <= startsAt) endsAt.setDate(endsAt.getDate() + 1)
 
     const dateLabel = startsAt.toLocaleDateString('pt-BR', {
       weekday: 'short',
       day: '2-digit',
       month: '2-digit',
+      timeZone: 'America/Sao_Paulo',
     })
     const title = `${sportLabel} · ${dateLabel}`
 
@@ -106,14 +107,15 @@ export class EventsService {
 
   async createStandalone(userId: string, input: CreateStandaloneEventDto) {
     const sportLabel = SPORT_LABELS[input.sport] ?? input.sport
-    const startsAt = new Date(`${input.date}T${input.startTime}:00`)
-    const endsAt = new Date(`${input.date}T${input.endTime}:00`)
+    const startsAt = new Date(`${input.date}T${input.startTime}:00-03:00`)
+    const endsAt = new Date(`${input.date}T${input.endTime}:00-03:00`)
     if (endsAt <= startsAt) endsAt.setDate(endsAt.getDate() + 1)
 
     const dateLabel = startsAt.toLocaleDateString('pt-BR', {
       weekday: 'short',
       day: '2-digit',
       month: '2-digit',
+      timeZone: 'America/Sao_Paulo',
     })
     const title = `${sportLabel} · ${dateLabel}`
 

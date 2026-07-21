@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { Card } from '@/components/ui/Card'
 import { SportIcon } from '@/components/shared/SportIcon'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, cn, copyToClipboard } from '@/lib/utils'
@@ -97,7 +98,7 @@ export default function ManageEventClient({
         rightAction={
           <button
             onClick={() => setShowShare(true)}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 cursor-pointer"
+            className="size-10 flex items-center justify-center rounded-full bg-slate-800 border border-primary-500/40 text-primary-400 hover:border-primary-500/60 transition-colors cursor-pointer"
           >
             <Share2 className="size-4" />
           </button>
@@ -107,7 +108,7 @@ export default function ManageEventClient({
       <div className="px-4 pb-8 space-y-4">
 
         {/* Event summary */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5">
+        <Card className="p-5">
           <div className="flex items-start gap-3 mb-4">
             <SportIcon sport={event.sport as SportId} size="md" />
             <div className="flex-1 min-w-0">
@@ -152,7 +153,7 @@ export default function ManageEventClient({
           {event.notes && (
             <p className="text-xs text-amber-400 mt-3">📝 {event.notes}</p>
           )}
-        </div>
+        </Card>
 
         <Button
           fullWidth
@@ -171,7 +172,7 @@ export default function ManageEventClient({
               {participants.length}/{event.max_participants}
             </span>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <Card className="p-0 overflow-hidden">
             {participants.length === 0 && (
               <p className="text-sm text-slate-500 text-center py-6">Ninguém confirmou ainda.</p>
             )}
@@ -185,7 +186,7 @@ export default function ManageEventClient({
                 <Badge variant="success" size="sm">Confirmado</Badge>
               </div>
             ))}
-          </div>
+          </Card>
         </section>
 
         {/* Pending */}
@@ -199,7 +200,7 @@ export default function ManageEventClient({
                 {waitlist.length}
               </span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+            <Card className="p-0 overflow-hidden">
               {waitlist.map((p, i) => (
                 <div key={p.id} className={cn('flex items-center gap-3 py-3 px-4', i > 0 && 'border-t border-slate-800')}>
                   <Avatar name={p.user.name} src={p.user.avatar_url ?? undefined} size="sm" />
@@ -236,7 +237,7 @@ export default function ManageEventClient({
                   )}
                 </div>
               ))}
-            </div>
+            </Card>
           </section>
         )}
 
@@ -246,7 +247,7 @@ export default function ManageEventClient({
             <span className="text-xs font-semibold text-slate-600 uppercase tracking-wider">
               Recusaram ({declinedParticipants.length})
             </span>
-            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden mt-2">
+            <Card className="p-0 overflow-hidden mt-2 bg-slate-900/50">
               {declinedParticipants.map((p, i) => (
                 <div key={p.id} className={cn('flex items-center gap-3 px-4 py-3 opacity-50', i > 0 && 'border-t border-slate-800')}>
                   <Avatar name={p.user.name} src={p.user.avatar_url ?? undefined} size="sm" />
@@ -256,7 +257,7 @@ export default function ManageEventClient({
                   <Badge variant="error" size="sm">Recusou</Badge>
                 </div>
               ))}
-            </div>
+            </Card>
           </section>
         )}
       </div>

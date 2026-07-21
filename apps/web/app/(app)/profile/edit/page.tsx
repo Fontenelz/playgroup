@@ -133,7 +133,7 @@ function EditProfileForm({ storeUser }: { storeUser: User }) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+            className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -163,7 +163,7 @@ function EditProfileForm({ storeUser }: { storeUser: User }) {
               onClick={() => fileRef.current?.click()}
               className="absolute -bottom-1 -right-1 size-9 rounded-full bg-primary-500 hover:bg-primary-400 border-2 border-slate-950 flex items-center justify-center cursor-pointer transition-colors shadow-lg"
             >
-              <Camera className="size-4 text-white" />
+              <Camera className="size-4 text-slate-900" />
             </button>
             <input
               ref={fileRef}
@@ -259,7 +259,7 @@ function EditProfileForm({ storeUser }: { storeUser: User }) {
                   </span>
                   {selected && (
                     <span className="size-4 rounded-full bg-primary-500 flex items-center justify-center">
-                      <Check className="size-2.5 text-white" strokeWidth={3} />
+                      <Check className="size-2.5 text-slate-900" strokeWidth={3} />
                     </span>
                   )}
                 </button>

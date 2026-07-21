@@ -52,7 +52,7 @@ export function SelectCardGroup<T extends string>({
             </div>
             {selected && (
               <div className="size-5 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Check className="size-3 text-white" strokeWidth={3} />
+                <Check className="size-3 text-slate-900" strokeWidth={3} />
               </div>
             )}
           </button>

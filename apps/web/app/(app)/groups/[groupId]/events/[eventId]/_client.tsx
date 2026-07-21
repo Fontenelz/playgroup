@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar, AvatarGroup } from '@/components/ui/Avatar'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { Card } from '@/components/ui/Card'
 import { WaitlistRow } from '@/components/shared/ParticipantRow'
 import { SportCover } from '@/components/shared/SportCover'
 import { SportIcon } from '@/components/shared/SportIcon'
@@ -256,7 +257,7 @@ export default function EventPageClient({
         rightAction={
           <button
             onClick={() => setShowShare(true)}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 cursor-pointer"
+            className="size-10 flex items-center justify-center rounded-full bg-slate-800 border border-primary-500/40 text-primary-400 hover:border-primary-500/60 transition-colors cursor-pointer"
           >
             <Share2 className="size-4" />
           </button>
@@ -266,7 +267,7 @@ export default function EventPageClient({
       <div className="px-4 pb-8 space-y-4">
 
         {/* Event hero card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden">
+        <Card className="p-0 overflow-hidden">
           <div className="relative h-32">
             <SportCover sport={event.sport as SportId} size="banner" className="absolute inset-0" priority />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
@@ -331,7 +332,7 @@ export default function EventPageClient({
               <p className="text-xs text-amber-400">📝 {event.notes}</p>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* MY ACTION CARD */}
         <AnimatePresence mode="wait">
@@ -339,7 +340,7 @@ export default function EventPageClient({
             <motion.div key="confirmed" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-primary-500/10 border border-primary-500/30 rounded-2xl p-4 flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-primary-500 flex items-center justify-center flex-shrink-0">
-                  <Check className="size-5 text-white" strokeWidth={3} />
+                  <Check className="size-5 text-slate-900" strokeWidth={3} />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-primary-300">Você está confirmado!</p>
@@ -471,7 +472,7 @@ export default function EventPageClient({
             </div>
           </button>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <Card className="p-0 overflow-hidden">
             {confirmedList.length === 0 && (
               <p className="text-sm text-slate-500 text-center py-6">Ninguém confirmou ainda.</p>
             )}
@@ -517,7 +518,7 @@ export default function EventPageClient({
                   : `Ver mais ${confirmedList.length - 5} confirmados`}
               </button>
             )}
-          </div>
+          </Card>
         </section>
 
         {/* ── WAITLIST ─────────────────────────────────────────────────── */}
@@ -546,7 +547,7 @@ export default function EventPageClient({
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
                 >
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+                  <Card className="p-0 overflow-hidden">
                     {waitlist.map((w, i) => (
                       <div key={w.id} className={cn(i > 0 && 'border-t border-slate-800')}>
                         <WaitlistRow
@@ -565,7 +566,7 @@ export default function EventPageClient({
                         🔔 Notificação automática ao abrir vaga · Prazo de 30 min para confirmar
                       </p>
                     </div>
-                  </div>
+                  </Card>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -591,7 +592,7 @@ export default function EventPageClient({
             <AnimatePresence>
               {showDeclined && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                  <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+                  <Card className="p-0 overflow-hidden bg-slate-900/50">
                     {declinedParticipants.map((p, i) => (
                       <div key={p.id} className={i > 0 ? 'border-t border-slate-800' : ''}>
                         <div className="flex items-center gap-3 px-4 py-3 opacity-50">
@@ -603,7 +604,7 @@ export default function EventPageClient({
                         </div>
                       </div>
                     ))}
-                  </div>
+                  </Card>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -612,7 +613,7 @@ export default function EventPageClient({
 
         {/* ── PAYMENT INFO ────────────────────────────────────────────── */}
         {group.per_event_fee && myStatus !== 'confirmed' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center gap-3">
+          <Card className="flex items-center gap-3">
             <span className="text-2xl">💰</span>
             <div>
               <p className="text-sm font-semibold text-slate-100">
@@ -622,7 +623,7 @@ export default function EventPageClient({
                 Pagamento via PIX após confirmação.
               </p>
             </div>
-          </div>
+          </Card>
         )}
       </div>
 

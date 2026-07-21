@@ -1,7 +1,7 @@
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
 import { api } from '@/lib/api/client'
-import { Header } from '@/components/layout/Header'
+import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { GroupsEventsTabs } from '@/components/shared/GroupsEventsTabs'
 import { GroupList } from './_components'
 
@@ -21,12 +21,14 @@ export default async function GroupsPage() {
 
   return (
     <div>
-      <Header
+      <ScreenHeader
+        icon={<Users className="size-5" />}
         title="Meus Grupos"
-        rightAction={
+        subtitle="Seus times e sessões"
+        right={
           <Link
             href="/create/group"
-            className="size-9 flex items-center justify-center rounded-xl bg-primary-500/10 text-primary-400 hover:bg-primary-500/20"
+            className="size-10 flex items-center justify-center rounded-full bg-slate-800 border border-primary-500/40 text-primary-400 hover:border-primary-500/60 transition-colors"
           >
             <Plus className="size-4" />
           </Link>
@@ -35,7 +37,7 @@ export default async function GroupsPage() {
 
       <GroupsEventsTabs active="groups" />
 
-      <div className="px-4 py-4 space-y-6">
+      <div className="px-5 py-4 space-y-6">
         {groups.length === 0 && (
           <p className="text-sm text-slate-500 text-center py-8">
             Você ainda não participa de nenhum grupo.

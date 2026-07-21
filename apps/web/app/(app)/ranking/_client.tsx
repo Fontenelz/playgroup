@@ -1,8 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Header } from '@/components/layout/Header'
+import { Trophy } from 'lucide-react'
+import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Avatar } from '@/components/ui/Avatar'
+import { Card } from '@/components/ui/Card'
 import { cn } from '@/lib/utils'
 
 export interface RankingUser {
@@ -31,7 +33,7 @@ export default function RankingClient({ ranking, currentUserId }: RankingClientP
   if (ranking.length === 0) {
     return (
       <div>
-        <Header title="Ranking" />
+        <ScreenHeader icon={<Trophy className="size-5" />} title="Ranking" subtitle="Presenças em todos os grupos" />
         <div className="flex flex-col items-center justify-center py-24 px-8 text-center">
           <p className="text-4xl mb-4">🏆</p>
           <p className="text-slate-300 font-semibold">Nenhuma presença ainda</p>
@@ -45,17 +47,17 @@ export default function RankingClient({ ranking, currentUserId }: RankingClientP
 
   return (
     <div>
-      <Header title="Ranking" />
+      <ScreenHeader icon={<Trophy className="size-5" />} title="Ranking" subtitle="Presenças em todos os grupos" />
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-5 py-4 space-y-4">
         {/* Summary */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
+        <Card className="p-3 flex items-center gap-3">
           <div className="size-8 rounded-lg bg-primary-500/20 flex items-center justify-center text-base">🏆</div>
           <div className="flex-1">
             <p className="text-sm font-semibold text-slate-100">Ranking geral</p>
             <p className="text-xs text-slate-500">Todos os grupos · Presenças</p>
           </div>
-        </div>
+        </Card>
 
         {/* Top 3 podium */}
         {ranking.length >= 2 && (
@@ -84,7 +86,7 @@ export default function RankingClient({ ranking, currentUserId }: RankingClientP
         )}
 
         {/* Full ranking */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        <Card className="p-0 overflow-hidden">
           {ranking.map((entry, i) => {
             const isMe = entry.user_id === currentUserId
             const nickname = entry.user.nickname ?? entry.user.name.split(' ')[0]
@@ -115,7 +117,7 @@ export default function RankingClient({ ranking, currentUserId }: RankingClientP
               </motion.div>
             )
           })}
-        </div>
+        </Card>
       </div>
     </div>
   )

@@ -21,7 +21,7 @@ export function StepBar({ current, total, labels }: StepBarProps) {
             <div className="flex flex-col items-center gap-1">
               <div className={cn(
                 'size-7 rounded-full border-2 flex items-center justify-center transition-all duration-300 text-xs font-bold flex-shrink-0',
-                done   ? 'border-primary-500 bg-primary-500 text-white'
+                done   ? 'border-primary-500 bg-primary-500 text-slate-900'
                        : active ? 'border-primary-500 bg-slate-900 text-primary-400'
                        : 'border-slate-700 bg-slate-900 text-slate-600',
               )}>
