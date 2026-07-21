@@ -151,16 +151,16 @@ export default function GroupPageClient({
       </div>
 
       {/* Tabs */}
-      <div className="px-4 mb-4">
-        <Card className="flex gap-1 p-1">
+      <div className="px-5 mb-4">
+        <Card className="flex gap-1 p-1 rounded-xl">
           {tabs.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => setTab(id)}
               className={cn(
-                'flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all cursor-pointer',
+                'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all cursor-pointer',
                 tab === id
-                  ? 'bg-primary-500 text-slate-900 shadow-lg shadow-primary-500/20'
+                  ? 'bg-primary-500/15 border border-primary-500/50 text-primary-400'
                   : 'text-slate-400 hover:text-slate-300',
               )}
             >

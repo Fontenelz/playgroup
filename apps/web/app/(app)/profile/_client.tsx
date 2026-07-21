@@ -68,7 +68,9 @@ export default function ProfileClient({
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center gap-3"
         >
-          <Avatar name={name} src={avatar_url ?? undefined} size="xl" />
+          <div className="rounded-full bg-gradient-to-br from-primary-500 to-primary-800 p-1 border-2 border-primary-500">
+            <Avatar name={name} src={avatar_url ?? undefined} size="xl" />
+          </div>
           <div className="text-center">
             <h2 className="text-xl font-bold text-slate-100">{name}</h2>
             {nickname && <p className="text-sm text-slate-500">@{nickname}</p>}
