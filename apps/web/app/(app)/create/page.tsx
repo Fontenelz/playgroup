@@ -118,7 +118,7 @@ function OptionCard({
       'flex items-center gap-4',
       active ? 'bg-primary-500/5 rounded-b-none' : 'hover:bg-primary-500/5',
     )}>
-      <div className="size-12 rounded-xl bg-slate-800 flex items-center justify-center text-2xl flex-shrink-0">
+      <div className="size-12 rounded-xl bg-primary-500/15 border border-primary-500/40 flex items-center justify-center text-2xl flex-shrink-0">
         {emoji}
       </div>
       <div>

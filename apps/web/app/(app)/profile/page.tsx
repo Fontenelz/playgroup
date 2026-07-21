@@ -10,9 +10,12 @@ interface ProfileSummaryResponse {
     avatarUrl: string | null
     city: string | null
     sports: string[]
+    createdAt: string
   } | null
   groups: ProfileGroup[]
   presences: number
+  goals: number
+  assists: number
 }
 
 export default async function ProfilePage() {
@@ -28,8 +31,11 @@ export default async function ProfilePage() {
       city={data.profile.city}
       sports={data.profile.sports ?? []}
       presences={data.presences}
+      goals={data.goals}
+      assists={data.assists}
       groupCount={data.groups.length}
       groups={data.groups}
+      memberSince={data.profile.createdAt}
     />
   )
 }

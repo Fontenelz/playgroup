@@ -1,16 +1,18 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Clock, MapPin, Users } from 'lucide-react'
+import { Clock, MapPin, Search, Users } from 'lucide-react'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { Card } from '@/components/ui/Card'
 import { SportCover } from '@/components/shared/SportCover'
 import { GroupsEventsTabs } from '@/components/shared/GroupsEventsTabs'
+import { EventViewSwitcher } from '@/components/shared/EventViewSwitcher'
 import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
-import { formatDate, formatTime } from '@/lib/utils'
+import { formatDate, formatTime, cn } from '@/lib/utils'
 import type { PublicEventCard } from '@/lib/actions/events'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -20,6 +22,26 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 export function DiscoverEventsClient({ events, error }: { events: PublicEventCard[]; error?: string }) {
+  const [search, setSearch] = useState('')
+  const [sportFilter, setSportFilter] = useState<string>('all')
+
+  const availableSports = useMemo(
+    () => Array.from(new Set(events.map((e) => e.sport))),
+    [events],
+  )
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return events.filter((event) => {
+      const matchesSport = sportFilter === 'all' || event.sport === sportFilter
+      const matchesSearch =
+        !q ||
+        event.title.toLowerCase().includes(q) ||
+        (event.location_name?.toLowerCase().includes(q) ?? false)
+      return matchesSport && matchesSearch
+    })
+  }, [events, search, sportFilter])
+
   return (
     <div>
       <ScreenHeader
@@ -28,6 +50,7 @@ export function DiscoverEventsClient({ events, error }: { events: PublicEventCar
         subtitle="Encontre jogos públicos perto de você"
       />
       <GroupsEventsTabs active="discover" />
+      <EventViewSwitcher />
 
       <div className="px-5 py-4 space-y-3">
         <p className="text-xs text-slate-500">
@@ -44,7 +67,60 @@ export function DiscoverEventsClient({ events, error }: { events: PublicEventCar
           </p>
         )}
 
-        {events.map((event) => {
+        {!error && events.length > 0 && (
+          <>
+            <Card className="flex items-center gap-2 px-4 py-3">
+              <Search className="size-4 text-slate-500 flex-shrink-0" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nome ou local..."
+                className="bg-transparent outline-none text-sm flex-1 text-slate-100 placeholder:text-slate-500"
+              />
+            </Card>
+
+            {availableSports.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5 scrollbar-hide">
+                <button
+                  onClick={() => setSportFilter('all')}
+                  className={cn(
+                    'flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition-colors cursor-pointer',
+                    sportFilter === 'all'
+                      ? 'bg-primary-500/15 border-primary-500/50 text-primary-400'
+                      : 'bg-slate-900 border-slate-700 text-slate-300',
+                  )}
+                >
+                  Todos
+                </button>
+                {availableSports.map((s) => {
+                  const sport = SPORT_MAP[s as SportId]
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setSportFilter(s)}
+                      className={cn(
+                        'flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium border transition-colors cursor-pointer',
+                        sportFilter === s
+                          ? 'bg-primary-500/15 border-primary-500/50 text-primary-400'
+                          : 'bg-slate-900 border-slate-700 text-slate-300',
+                      )}
+                    >
+                      {sport?.emoji} {sport?.label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {filtered.length === 0 && (
+              <p className="text-sm text-slate-500 text-center py-8">
+                Nenhum evento encontrado com esse filtro.
+              </p>
+            )}
+          </>
+        )}
+
+        {filtered.map((event) => {
           const sport = SPORT_MAP[event.sport as SportId]
           const slotsLeft = Math.max(0, event.max_participants - event.participant_count)
 

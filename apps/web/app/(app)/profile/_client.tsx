@@ -1,19 +1,17 @@
 'use client'
 
+import { useTransition } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { LogOut, ChevronRight, Pencil, User } from 'lucide-react'
+import { LogOut, Settings, Leaf, Calendar as CalIcon, User } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
 import { Avatar } from '@/components/ui/Avatar'
-import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
-import { useTransition } from 'react'
 import { signOut } from '@/lib/actions/auth'
-import toast from 'react-hot-toast'
+import { formatDate } from '@/lib/utils'
 
 export interface ProfileGroup {
   id: string
@@ -28,20 +26,27 @@ interface ProfileClientProps {
   city?: string | null
   sports: string[]
   presences: number
+  goals: number
+  assists: number
   groupCount: number
   groups: ProfileGroup[]
+  memberSince: string
 }
 
+function Stat({ v, l, primary }: { v: string | number; l: string; primary?: boolean }) {
+  return (
+    <div className="text-center px-2 py-3">
+      <div className={`text-2xl font-bold ${primary ? 'text-primary' : 'text-card-foreground'}`}>{v}</div>
+      <div className="text-[10px] uppercase text-muted-foreground tracking-wider leading-tight mt-1">{l}</div>
+    </div>
+  )
+}
+
+// Port literal de exact-replication-dev/src/routes/_app.profile.tsx (Vite/TanStack → Next).
 export default function ProfileClient({
-  name, nickname, avatar_url, city, sports, presences, groupCount, groups,
+  name, nickname, avatar_url, city, sports, presences, goals, assists, groupCount, groups, memberSince,
 }: ProfileClientProps) {
   const [isPending, startTransition] = useTransition()
-
-  const stats = [
-    { label: 'Presenças',   value: presences },
-    { label: 'Grupos',      value: groupCount },
-    { label: 'Conquistas',  value: '—' },
-  ]
 
   function handleLogout() {
     toast('Até logo!', { icon: '👋' })
@@ -49,55 +54,63 @@ export default function ProfileClient({
   }
 
   return (
-    <div>
+    <div className="pb-4">
       <ScreenHeader
         icon={<User className="size-5" />}
         title="Meu Perfil"
         subtitle="Acompanhe sua jornada e conquistas"
         right={
-          <Link href="/profile/edit" className="size-10 flex items-center justify-center rounded-full bg-slate-800 border border-primary-500/40 text-primary-400 hover:border-primary-500/60 transition-colors">
-            <Pencil className="size-4" />
+          <Link href="/profile/edit" className="size-10 rounded-full bg-secondary border border-border text-muted-foreground flex items-center justify-center">
+            <Settings className="size-4" />
           </Link>
         }
       />
 
-      <div className="px-5 py-6 space-y-6">
-        {/* Avatar + info */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center gap-3"
-        >
-          <div className="rounded-full bg-gradient-to-br from-primary-500 to-primary-800 p-1 border-2 border-primary-500">
-            <Avatar name={name} src={avatar_url ?? undefined} size="xl" />
+      <div className="px-5 space-y-4">
+        <div className="flex flex-col items-center pt-2">
+          <div className="size-28 rounded-full bg-gradient-to-br from-primary to-primary-800 p-1 border-2 border-primary">
+            <Avatar name={name} src={avatar_url ?? undefined} size="xl" className="size-full" />
           </div>
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-slate-100">{name}</h2>
-            {nickname && <p className="text-sm text-slate-500">@{nickname}</p>}
-            {city && <p className="text-sm text-slate-400 mt-0.5">{city}</p>}
-            <div className="flex items-center justify-center gap-1.5 mt-2 flex-wrap">
+          <div className="mt-3 text-2xl font-bold text-foreground">{name}</div>
+          <div className="text-sm text-muted-foreground">
+            {nickname && `@${nickname} · `}Membro desde {formatDate(memberSince, { weekday: undefined, day: undefined, month: 'long', year: 'numeric' })}
+          </div>
+          {sports.length > 0 && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap justify-center">
               {sports.map((s) => (
-                <Badge key={s} variant="primary" size="sm">
-                  {SPORT_MAP[s as SportId]?.emoji} {SPORT_MAP[s as SportId]?.label}
-                </Badge>
+                <span
+                  key={s}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/50 bg-accent/30 px-3 py-1 text-xs text-primary font-medium"
+                >
+                  <Leaf className="size-3" /> {SPORT_MAP[s as SportId]?.label ?? s}
+                </span>
               ))}
+              {city && (
+                <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground">{city}</span>
+              )}
             </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-4 rounded-2xl bg-card border border-border divide-x divide-border">
+          <Stat v={presences} l="Presenças" primary />
+          <Stat v={groupCount} l="Grupos" primary />
+          <Stat v={goals} l="Gols" primary />
+          <Stat v={assists} l="Assistências" primary />
+        </div>
+
+        <div className="flex items-center justify-between rounded-2xl border border-border px-4 py-3 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <CalIcon className="size-4" />
+            Membro desde
           </div>
-        </motion.div>
+          <div className="font-semibold text-foreground">
+            {formatDate(memberSince, { weekday: undefined, day: undefined, month: 'long', year: 'numeric' })}
+          </div>
+        </div>
 
-        {/* Stats */}
-        <Card className="p-0 grid grid-cols-3 divide-x divide-slate-700">
-          {stats.map(({ label, value }) => (
-            <div key={label} className="text-center px-2 py-4">
-              <p className="text-2xl font-bold text-primary-400">{value}</p>
-              <p className="text-[11px] uppercase text-slate-500 tracking-wider leading-tight mt-1">{label}</p>
-            </div>
-          ))}
-        </Card>
-
-        {/* Conquistas */}
-        <Card className="space-y-3">
-          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Conquistas</h3>
+        <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conquistas</h3>
           {[
             { emoji: '⭐', label: '6 meses seguidos', done: false },
             { emoji: '💰', label: 'Sem atraso em 2025', done: false },
@@ -105,30 +118,27 @@ export default function ProfileClient({
           ].map(({ emoji, label, done, progress }) => (
             <div key={label} className="flex items-center gap-3">
               <span className={done ? '' : 'grayscale opacity-50'}>{emoji}</span>
-              <span className={`text-sm flex-1 ${done ? 'text-slate-200' : 'text-slate-500'}`}>{label}</span>
-              {progress && <span className="text-xs text-slate-500">{progress}</span>}
-              {done && <span className="text-xs text-primary-400">✓</span>}
+              <span className={`text-sm flex-1 ${done ? 'text-foreground' : 'text-muted-foreground'}`}>{label}</span>
+              {progress && <span className="text-xs text-muted-foreground">{progress}</span>}
+              {done && <span className="text-xs text-primary">✓</span>}
             </div>
           ))}
-        </Card>
+        </div>
 
-        {/* Meus grupos */}
         {groups.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Meus grupos</h3>
+            <div className="text-[11px] uppercase text-muted-foreground tracking-wider">Meus grupos</div>
             {groups.map((group) => (
               <Link key={group.id} href={`/groups/${group.id}`}>
-                <Card interactive className="flex items-center gap-3 p-3 rounded-xl">
+                <div className="flex items-center gap-3 rounded-2xl bg-card border border-border p-3">
                   <SportIcon sport={group.sport as SportId} size="sm" />
-                  <p className="flex-1 text-sm text-slate-200">{group.name}</p>
-                  <ChevronRight className="size-4 text-slate-600" />
-                </Card>
+                  <p className="flex-1 text-sm text-foreground">{group.name}</p>
+                </div>
               </Link>
             ))}
           </div>
         )}
 
-        {/* Logout */}
         <Button variant="danger" fullWidth loading={isPending} onClick={handleLogout} leftIcon={<LogOut className="size-4" />}>
           Sair da conta
         </Button>

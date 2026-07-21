@@ -56,6 +56,34 @@
   --radius-xl:  1.125rem;
   --radius-2xl: 1.375rem;
   --radius-3xl: 1.625rem;
+
+  /* Tokens semânticos sem prefixo — hex exatos convertidos do OKLCH de
+     exact-replication-dev/src/styles.css, pra poder colar as classes de lá
+     (bg-card, border-border, text-muted-foreground, bg-secondary...) direto
+     sem precisar traduzir classe por classe. */
+  --color-card:                    #14191C;
+  --color-card-foreground:         #F8F8F8;
+  --color-popover:                 #14191C;
+  --color-popover-foreground:      #F8F8F8;
+  --color-primary:                 #4EE75F;
+  --color-primary-foreground:      #060D06;
+  --color-secondary:               #252A2D;
+  --color-secondary-foreground:    #F8F8F8;
+  --color-muted:                   #1D2226;
+  --color-muted-foreground:        #8D9398;
+  --color-accent:                  #15461A;
+  --color-accent-foreground:       #4EE75F;
+  --color-destructive:             #FF343E;
+  --color-destructive-foreground:  #F8F8F8;
+  --color-warning:                 #F9A300;
+  --color-warning-foreground:      #231200;
+  --color-info:                    #0089ED;
+  --color-info-foreground:         #F8F8F8;
+  --color-border:                  #292F32;
+  --color-input:                   #292F32;
+  --color-ring:                    #4EE75F;
+  --color-surface:                 #14191C;
+  --color-surface-2:               #1D2226;
 }
 
 :root {

@@ -2,18 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { Bell, Home, Plus, ChevronRight, Check, X } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
+import { Bell, Home, Zap, Users, CircleDot, Calendar, ChevronRight, Clock, Check, X, Search } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Avatar } from '@/components/ui/Avatar'
-import { Card } from '@/components/ui/Card'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
-import { SportCover } from '@/components/shared/SportCover'
+import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, cn } from '@/lib/utils'
 import { confirmParticipation, declineParticipation } from '@/lib/actions/events'
-import toast from 'react-hot-toast'
 
 export interface HomeUser {
   id: string
@@ -36,6 +32,7 @@ export interface HomeEvent {
   sport: string
   starts_at: string
   ends_at: string
+  location_name?: string | null
   max_participants: number
   participant_count: number
   my_status: string | null
@@ -61,7 +58,136 @@ interface HomeClientProps {
   unreadCount: number
 }
 
-export default function HomeClient({ user, groups, events, notifications, unreadCount }: HomeClientProps) {
+function Chip({
+  children,
+  variant = 'default',
+}: {
+  children: React.ReactNode
+  variant?: 'default' | 'info' | 'warning' | 'muted' | 'outline'
+}) {
+  const cls = {
+    default: 'bg-secondary text-foreground',
+    info:    'bg-info/20 text-info border border-info/40',
+    warning: 'bg-warning/20 text-warning border border-warning/40',
+    muted:   'bg-secondary text-muted-foreground',
+    outline: 'border border-border text-foreground',
+  }[variant]
+  return (
+    <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ${cls}`}>
+      {children}
+    </span>
+  )
+}
+
+function MatchCard({
+  title,
+  sportLabel,
+  isGroup,
+  slots,
+  filled,
+  total,
+  location,
+  time,
+  visibility,
+  status,
+  onConfirm,
+  onDecline,
+}: {
+  title: string
+  sportLabel?: string
+  isGroup: boolean
+  slots: number
+  filled: number
+  total: number
+  location: string
+  time?: string
+  visibility?: 'link_only' | 'public' | null
+  status: string | null
+  onConfirm: () => void
+  onDecline: () => void
+}) {
+  const canRespond = status === null || status === 'pending'
+
+  return (
+    <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="font-bold text-lg text-card-foreground">{title}</div>
+          <div className="text-sm text-muted-foreground">{location}</div>
+        </div>
+        {status === 'confirmed' ? (
+          <span className="rounded-md border border-primary/50 text-primary text-xs font-bold px-2 py-1 flex-shrink-0">
+            CONFIRMADO
+          </span>
+        ) : status === 'declined' ? (
+          <span className="rounded-md border border-destructive/50 text-destructive text-xs font-bold px-2 py-1 flex-shrink-0">
+            RECUSADO
+          </span>
+        ) : (
+          <span className={cn(
+            'rounded-md border text-xs font-bold px-2 py-1 flex-shrink-0',
+            slots > 0 ? 'border-primary/50 text-primary' : 'border-border text-muted-foreground',
+          )}>
+            {slots > 0 ? 'ABERTO' : 'LOTADO'}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {sportLabel && <Chip variant="outline">{sportLabel}</Chip>}
+        {isGroup ? (
+          <Chip variant="info">Grupo</Chip>
+        ) : (
+          <Chip variant="info">{visibility === 'public' ? 'Público' : 'Só com link'}</Chip>
+        )}
+        {slots > 0 ? (
+          <Chip variant="warning">{slots} vaga{slots === 1 ? '' : 's'}</Chip>
+        ) : (
+          <Chip variant="muted">Lotado</Chip>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {Array.from({ length: total }).map((_, i) => (
+          <span
+            key={i}
+            className={`size-3.5 rounded-full border-2 ${i < filled ? 'bg-primary border-primary' : 'border-muted-foreground/40'}`}
+          />
+        ))}
+        <span className="ml-1 text-xs text-muted-foreground">{filled}/{total}</span>
+      </div>
+
+      {time && (
+        <div className="flex items-center gap-2 pt-2 border-t border-border text-sm text-muted-foreground">
+          <Clock className="size-4" />
+          <span>{time}</span>
+        </div>
+      )}
+
+      {canRespond && (
+        <div className="flex gap-2">
+          <button
+            onClick={onConfirm}
+            className="flex-1 rounded-xl bg-primary text-primary-foreground font-semibold py-2 text-sm flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Check className="size-3.5" strokeWidth={3} /> Confirmar
+          </button>
+          <button
+            onClick={onDecline}
+            className="rounded-xl border border-border px-3 flex items-center justify-center text-muted-foreground cursor-pointer"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Port literal de exact-replication-dev/src/routes/_app.index.tsx (Vite/TanStack → Next),
+// com a lista de próximos eventos no estilo MatchCard (de _app.fillups.tsx) no lugar
+// do card único "Featured Venue" — mantendo confirmar/recusar de verdade.
+export default function HomeClient({ user, events, unreadCount }: HomeClientProps) {
   const [, startTransition] = useTransition()
   const [eventStatuses, setEventStatuses] = useState<Record<string, string | null>>(
     Object.fromEntries(events.map((e) => [e.id, e.my_status])),
@@ -97,14 +223,17 @@ export default function HomeClient({ user, groups, events, notifications, unread
     <div className="pb-4">
       <ScreenHeader
         icon={<Home className="size-5" />}
-        title={`Olá, ${nickname} 👋`}
+        title={`Olá, ${nickname}`}
         subtitle="Pronto pro próximo jogo?"
         right={
           <div className="flex items-center gap-2">
-            <Link href="/notifications" className="relative size-10 flex items-center justify-center rounded-full bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors">
-              <Bell className="size-5 text-slate-400" />
+            <Link href="/eventos/descobrir" className="size-10 flex items-center justify-center rounded-full bg-secondary border border-primary/40 text-primary">
+              <Search className="size-4" />
+            </Link>
+            <Link href="/notifications" className="relative size-10 flex items-center justify-center rounded-full bg-secondary border border-primary/40 text-primary">
+              <Bell className="size-4" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 size-4 bg-primary-500 rounded-full text-[10px] font-bold text-slate-900 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 size-4 bg-primary rounded-full text-[10px] font-bold text-primary-foreground flex items-center justify-center">
                   {unreadCount}
                 </span>
               )}
@@ -117,167 +246,79 @@ export default function HomeClient({ user, groups, events, notifications, unread
       />
 
       <div className="px-5 space-y-4">
-
-      {/* Próximos eventos */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Próximos eventos</h2>
-          <Link href="/groups" className="text-xs text-primary-400 font-medium">Ver todos</Link>
-        </div>
-
-        {events.length === 0 ? (
-          <Card className="text-center py-8">
-            <p className="text-2xl mb-2">📅</p>
-            <p className="text-sm text-slate-400">Nenhum evento próximo.</p>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {events.map((event, i) => {
-              const status = eventStatuses[event.id] ?? null
-              const slots = event.max_participants - event.participant_count
-              const date = formatDate(event.starts_at, { weekday: 'short', day: '2-digit', month: '2-digit' })
-              const time = formatTime(event.starts_at)
-
-              return (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.07 }}
-                >
-                  <Link href={event.group_id ? `/groups/${event.group_id}/events/${event.id}` : `/e/${event.id}`}>
-                    <Card interactive className={cn(
-                      status === 'confirmed' && 'border border-primary-500/30',
-                    )}>
-                      <div className="flex items-start gap-3 mb-3">
-                        <SportCover sport={event.sport as SportId} size="sm" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-100 truncate">
-                            {event.group_name ?? 'Evento avulso'}
-                          </p>
-                          <p className="text-xs text-slate-400 capitalize mt-0.5">
-                            {date} · {time}
-                          </p>
-                        </div>
-                        {status === 'confirmed' && (
-                          <Badge variant="success" size="sm">Confirmado</Badge>
-                        )}
-                        {status === 'declined' && (
-                          <Badge variant="error" size="sm">Recusado</Badge>
-                        )}
-                      </div>
-
-                      {/* Slots bar */}
-                      <div className="space-y-1.5 mb-3">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400">{event.participant_count}/{event.max_participants} confirmados</span>
-                          <span className={cn('font-medium', slots > 0 ? 'text-primary-400' : 'text-amber-400')}>
-                            {slots > 0 ? `${slots} vagas` : 'Lotado'}
-                          </span>
-                        </div>
-                        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${(event.participant_count / event.max_participants) * 100}%` }}
-                            transition={{ duration: 0.6, delay: i * 0.07 + 0.2 }}
-                            className="h-full bg-primary-500 rounded-full"
-                          />
-                        </div>
-                      </div>
-
-                      {/* CTA */}
-                      {(status === null || status === 'pending') && (
-                        <div className="flex gap-2" onClick={(e) => e.preventDefault()}>
-                          <Button
-                            size="sm"
-                            fullWidth
-                            onClick={() => handleConfirm(event.id)}
-                            leftIcon={<Check className="size-3.5" strokeWidth={3} />}
-                          >
-                            Confirmar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDecline(event.id)}
-                            className="px-3"
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </Card>
-                  </Link>
-                </motion.div>
-              )
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* Meus grupos */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Meus grupos</h2>
-          <Link href="/groups" className="text-xs text-primary-400 font-medium">Ver todos</Link>
-        </div>
-
-        <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-          {groups.map((group) => (
-            <Link key={group.id} href={`/groups/${group.id}`}>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-              >
-                <Card interactive className="flex-shrink-0 w-44 h-[172px] flex flex-col active:scale-95">
-                  <SportCover sport={group.sport as SportId} size="md" className="mb-3" />
-                  <p className="text-xs font-semibold text-slate-200 leading-snug line-clamp-2 mb-1">{group.name}</p>
-                  <p className="text-[11px] text-slate-500">{group.member_count} membros</p>
-                  <div className="mt-auto pt-2 h-5 flex items-center">
-                    {group.my_role === 'admin' && (
-                      <Badge variant="primary" size="sm">Admin</Badge>
-                    )}
-                  </div>
-                </Card>
-              </motion.div>
-            </Link>
-          ))}
-
-          {/* Add group */}
-          <Link href="/create/group">
-            <div className="flex-shrink-0 w-44 h-full min-h-[140px] border border-dashed border-slate-700 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary-500/50 hover:bg-primary-500/5 transition-all">
-              <div className="size-10 rounded-xl bg-slate-800 flex items-center justify-center">
-                <Plus className="size-5 text-slate-400" />
-              </div>
-              <span className="text-xs text-slate-500">Novo grupo</span>
-            </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Link href="/eventos/fillups" className="rounded-2xl bg-card border border-border p-4 hover:border-primary/40 transition">
+            <CircleDot className="size-6 text-primary mb-6" />
+            <div className="text-sm font-semibold text-card-foreground">Fill Ups</div>
+            <div className="text-xs text-muted-foreground">Encontre companheiros</div>
+          </Link>
+          <Link href="/eventos/solo-kickoffs" className="rounded-2xl bg-card border border-border p-4 hover:border-primary/40 transition">
+            <Zap className="size-6 text-primary mb-6" fill="currentColor" />
+            <div className="text-sm font-semibold text-card-foreground">Solo Kickoffs</div>
+            <div className="text-xs text-muted-foreground">Entre em segundos</div>
+          </Link>
+          <Link href="/groups" className="rounded-2xl bg-card border border-border p-4 hover:border-primary/40 transition">
+            <Users className="size-6 text-primary mb-6" />
+            <div className="text-sm font-semibold text-card-foreground">Meus Grupos</div>
+            <div className="text-xs text-muted-foreground">Seus times</div>
+          </Link>
+          <Link href="/meus-eventos" className="rounded-2xl bg-card border border-border p-4 hover:border-primary/40 transition">
+            <Calendar className="size-6 text-primary mb-6" />
+            <div className="text-sm font-semibold text-card-foreground">Meus Eventos</div>
+            <div className="text-xs text-muted-foreground">Próximos jogos</div>
           </Link>
         </div>
-      </section>
 
-      {/* Atividade recente */}
-      {notifications.length > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Atividade recente</h2>
-          <Card className="p-0 overflow-hidden">
-            {notifications.map((notif, i) => (
-              <div key={notif.id} className={cn('flex items-start gap-3 p-4', i > 0 && 'border-t border-slate-800')}>
-                <div className="size-9 rounded-xl bg-slate-800 flex items-center justify-center text-lg flex-shrink-0" aria-hidden>
-                  {[...notif.title][0]}
+        <div>
+          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Próximos eventos</div>
+
+          {events.length === 0 ? (
+            <Link href="/create" className="flex items-center justify-between rounded-2xl bg-card border border-border p-4">
+              <div className="flex items-center gap-3">
+                <div className="size-12 rounded-xl bg-accent/40 border border-primary/40 flex items-center justify-center text-primary">
+                  <Calendar className="size-5" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-200">{notif.title}</p>
-                  <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{notif.body}</p>
+                <div>
+                  <div className="font-semibold text-card-foreground">Nenhum evento próximo</div>
+                  <div className="text-xs text-muted-foreground">Criar ou entrar em um jogo</div>
                 </div>
-                {!notif.is_read && <div className="size-2 rounded-full bg-primary-500 flex-shrink-0 mt-1.5" />}
               </div>
-            ))}
-            <Link href="/notifications" className="flex items-center justify-center gap-1 p-3 border-t border-slate-800 text-xs text-slate-500 hover:text-primary-400 transition-colors">
-              Ver todas as notificações <ChevronRight className="size-3" />
+              <ChevronRight className="size-5 text-muted-foreground" />
             </Link>
-          </Card>
-        </section>
-      )}
+          ) : (
+            <div className="space-y-3">
+              {events.map((event) => {
+                const status = eventStatuses[event.id] ?? null
+                const sport = SPORT_MAP[event.sport as SportId]
+                const slots = Math.max(0, event.max_participants - event.participant_count)
+                const total = Math.min(event.max_participants, 20)
+                const time = `${formatDate(event.starts_at, { weekday: 'short', day: '2-digit', month: '2-digit' })} · ${formatTime(event.starts_at)}`
+                const href = event.group_id ? `/groups/${event.group_id}/events/${event.id}` : `/e/${event.id}`
+
+                return (
+                  <Link key={event.id} href={href} onClick={(e) => {
+                    if ((e.target as HTMLElement).closest('button')) e.preventDefault()
+                  }}>
+                    <MatchCard
+                      title={`${sport?.emoji ?? ''} ${event.group_name ?? 'Evento avulso'}`}
+                      sportLabel={sport?.label}
+                      isGroup={!!event.group_id}
+                      slots={slots}
+                      filled={event.participant_count}
+                      total={total}
+                      location={event.location_name ?? 'Local a definir'}
+                      time={time}
+                      visibility={event.visibility}
+                      status={status}
+                      onConfirm={() => handleConfirm(event.id)}
+                      onDecline={() => handleDecline(event.id)}
+                    />
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Card } from '@/components/ui/Card'
 import { createInviteCode } from '@/lib/actions/groups'
+import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, formatCurrency, cn, copyToClipboard } from '@/lib/utils'
 
@@ -43,6 +44,7 @@ export interface EventItem {
   participant_count: number
   notes?: string | null
   my_status: string | null
+  confirmed_avatars?: { name: string; avatar_url?: string }[]
 }
 
 export interface MemberItem {
@@ -189,6 +191,7 @@ export default function GroupPageClient({
               groupId={group.id}
               sport={group.sport}
               isOrganizer={isOrganizer}
+              perEventFee={group.per_event_fee}
             />
           )}
           {tab === 'members' && (
@@ -206,13 +209,14 @@ export default function GroupPageClient({
 // ─── Events Tab ────────────────────────────────────────────────────────────────
 
 function EventsTab({
-  upcoming, past, groupId, sport, isOrganizer,
+  upcoming, past, groupId, sport, isOrganizer, perEventFee,
 }: {
   upcoming: EventItem[]
   past: EventItem[]
   groupId: string
   sport: string
   isOrganizer: boolean
+  perEventFee?: number | null
 }) {
   return (
     <div className="space-y-5">
@@ -235,7 +239,7 @@ function EventsTab({
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider my-3">Próximos</p>
           <div className="space-y-3">
             {upcoming.map((event, i) => (
-              <EventCard key={event.id} event={event} groupId={groupId} sport={sport} index={i} />
+              <EventCard key={event.id} event={event} groupId={groupId} sport={sport} index={i} perEventFee={perEventFee} />
             ))}
           </div>
         </section>
@@ -275,15 +279,20 @@ function EventsTab({
 }
 
 function EventCard({
-  event, groupId, sport, index,
+  event, groupId, sport, index, perEventFee,
 }: {
   event: EventItem
   groupId: string
   sport: string
   index: number
+  perEventFee?: number | null
 }) {
   const slots = event.max_participants - event.participant_count
   const fill = event.participant_count / event.max_participants
+  const sportInfo = SPORT_MAP[sport as SportId]
+  const durationMin = Math.round(
+    (new Date(event.ends_at).getTime() - new Date(event.starts_at).getTime()) / 60000,
+  )
 
   const statusMap: Record<string, { label: string; badge: 'success' | 'warning' | 'error' | 'info' }> = {
     confirmed: { label: 'Confirmado', badge: 'success' },
@@ -302,54 +311,86 @@ function EventCard({
       transition={{ delay: index * 0.06 }}
     >
       <Link href={`/groups/${groupId}/events/${event.id}`}>
-        <Card interactive className={cn(
-          'space-y-3',
-          event.my_status === 'confirmed' && 'border border-primary-500/30',
+        <div className={cn(
+          'rounded-2xl bg-card border p-4 space-y-3',
+          event.my_status === 'confirmed' ? 'border-primary/50' : 'border-border',
         )}>
+          {myStatusCfg && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/40 border border-primary/40 px-3 py-1 text-xs text-primary font-medium">
+              <span className="size-1.5 rounded-full bg-primary" />
+              {myStatusCfg.label}
+            </span>
+          )}
+
           <div className="flex items-start justify-between gap-2">
-            <div className="flex items-start gap-3">
-              <SportCover sport={sport as SportId} size="sm" />
-              <div>
-                <p className="text-base font-semibold text-slate-100">
-                  {formatDate(event.starts_at, { weekday: 'short', day: '2-digit', month: '2-digit' })}
-                </p>
-                <p className="text-sm text-slate-400 mt-0.5">
-                  {formatTime(event.starts_at)} – {formatTime(event.ends_at)}
-                </p>
-                {event.location_name && (
-                  <p className="text-xs text-slate-500 mt-1">📍 {event.location_name}</p>
-                )}
-              </div>
+            <div className="min-w-0">
+              <p className="text-xl font-bold text-card-foreground">
+                {sportInfo?.emoji} {formatDate(event.starts_at, { weekday: 'short', day: '2-digit', month: '2-digit' })}
+              </p>
+              <p className="text-sm text-muted-foreground truncate">{event.location_name ?? 'Local a definir'}</p>
             </div>
-            {myStatusCfg && (
-              <Badge variant={myStatusCfg.badge} size="sm">{myStatusCfg.label}</Badge>
-            )}
+            <span className={cn(
+              'rounded-full border text-xs font-semibold px-3 py-1 flex-shrink-0',
+              slots > 0 ? 'border-primary/50 text-primary' : 'border-border text-muted-foreground',
+            )}>
+              {slots > 0 ? 'Aberto' : 'Lotado'}
+            </span>
           </div>
 
-          {/* Slots progress */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-xs">
-              <span className="text-slate-400">{event.participant_count}/{event.max_participants} confirmados</span>
-              <span className={cn('font-medium', slots > 0 ? 'text-primary-400' : 'text-amber-400')}>
-                {slots > 0 ? `${slots} vagas livres` : 'Lotado'}
-              </span>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl bg-secondary/50 border border-border p-3">
+              <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Horário</p>
+              <p className="text-sm font-bold text-card-foreground mt-1">{formatTime(event.starts_at)}</p>
             </div>
-            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div className="rounded-xl bg-secondary/50 border border-border p-3">
+              <p className="text-[10px] uppercase text-muted-foreground tracking-wider">Duração</p>
+              <p className="text-sm font-bold text-card-foreground mt-1">{durationMin} min</p>
+            </div>
+            <div className="rounded-xl bg-secondary/50 border border-border p-3">
+              <p className="text-[10px] uppercase text-muted-foreground tracking-wider">
+                {perEventFee ? 'Valor' : 'Vagas'}
+              </p>
+              <p className="text-sm font-bold text-card-foreground mt-1">
+                {perEventFee ? formatCurrency(perEventFee) : `${event.participant_count}/${event.max_participants}`}
+              </p>
+            </div>
+          </div>
+
+          {event.confirmed_avatars && event.confirmed_avatars.length > 0 && (
+            <div className="flex items-center -space-x-2">
+              {event.confirmed_avatars.map((p, i) => (
+                <div key={i} className="rounded-full border-2 border-card">
+                  <Avatar name={p.name} src={p.avatar_url} size="sm" />
+                </div>
+              ))}
+              {event.participant_count > event.confirmed_avatars.length && (
+                <div className="size-8 rounded-full border-2 border-card bg-secondary flex items-center justify-center text-xs font-semibold text-foreground">
+                  +{event.participant_count - event.confirmed_avatars.length}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div>
+            <div className="text-sm mb-1.5 text-foreground">
+              {event.participant_count} de {event.max_participants} vagas preenchidas
+            </div>
+            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
-                animate={{ width: `${fill * 100}%` }}
+                animate={{ width: `${Math.min(fill, 1) * 100}%` }}
                 transition={{ duration: 0.5, delay: index * 0.06 + 0.15 }}
-                className={cn('h-full rounded-full', fill >= 1 ? 'bg-amber-500' : 'bg-primary-500')}
+                className={cn('h-full rounded-full', fill >= 1 ? 'bg-warning' : 'bg-primary')}
               />
             </div>
           </div>
 
           {event.notes && (
-            <p className="text-xs text-slate-500 bg-slate-800 rounded-lg px-3 py-2 leading-relaxed">
+            <p className="text-xs text-muted-foreground bg-secondary rounded-lg px-3 py-2 leading-relaxed">
               📝 {event.notes}
             </p>
           )}
-        </Card>
+        </div>
       </Link>
     </motion.div>
   )

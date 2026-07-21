@@ -105,6 +105,13 @@ export class EventsController {
   }
 
   // IMPORTANTE: precisa vir antes de 'events/:eventId', senão o Express
+  // casa "mine" como se fosse um :eventId.
+  @Get('events/mine')
+  mine(@CurrentUser() user: SupabaseUser) {
+    return this.events.myEvents(user.id)
+  }
+
+  // IMPORTANTE: precisa vir antes de 'events/:eventId', senão o Express
   // casa "discover" como se fosse um :eventId.
   @Get('events/discover')
   discover(

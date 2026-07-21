@@ -685,6 +685,100 @@ export class EventsService {
     }
   }
 
+  /** Todos os eventos (de grupo + avulsos) em que o usuário participa ou que criou, sem limite —
+   *  diferente do preview de 5 itens do dashboard (`DashboardService.home`). */
+  async myEvents(userId: string) {
+    const memberships = await this.prisma.groupMember.findMany({
+      where: { userId, status: 'active' },
+      select: { groupId: true },
+    })
+    const groupIds = memberships.map((m) => m.groupId)
+
+    const [groupEventsRaw, standaloneEventsRaw] = await Promise.all([
+      groupIds.length > 0
+        ? this.prisma.event.findMany({
+            where: {
+              groupId: { in: groupIds },
+              status: 'published',
+              participants: { some: { userId } },
+            },
+            orderBy: { startsAt: 'desc' },
+            select: {
+              id: true,
+              groupId: true,
+              title: true,
+              sport: true,
+              startsAt: true,
+              endsAt: true,
+              locationName: true,
+              locationAddress: true,
+              maxParticipants: true,
+              participantCount: true,
+              eventFee: true,
+              group: { select: { name: true } },
+              participants: { where: { userId }, select: { status: true }, take: 1 },
+            },
+          })
+        : Promise.resolve([]),
+      this.prisma.event.findMany({
+        where: {
+          groupId: null,
+          status: { in: ['published', 'open'] },
+          OR: [{ createdBy: userId }, { participants: { some: { userId } } }],
+        },
+        orderBy: { startsAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          sport: true,
+          startsAt: true,
+          endsAt: true,
+          locationName: true,
+          locationAddress: true,
+          maxParticipants: true,
+          participantCount: true,
+          eventFee: true,
+          participants: { where: { userId }, select: { status: true }, take: 1 },
+        },
+      }),
+    ])
+
+    const events = [
+      ...groupEventsRaw.map((e) => ({
+        id: e.id,
+        group_id: e.groupId,
+        title: e.title,
+        sport: e.sport,
+        starts_at: e.startsAt,
+        ends_at: e.endsAt,
+        location_name: e.locationName,
+        location_address: e.locationAddress,
+        max_participants: e.maxParticipants,
+        participant_count: e.participantCount,
+        event_fee: e.eventFee ? Number(e.eventFee) : null,
+        group_name: e.group?.name ?? null,
+        my_status: e.participants[0]?.status ?? null,
+      })),
+      ...standaloneEventsRaw.map((e) => ({
+        id: e.id,
+        group_id: null as string | null,
+        title: e.title,
+        sport: e.sport,
+        starts_at: e.startsAt,
+        ends_at: e.endsAt,
+        location_name: e.locationName,
+        location_address: e.locationAddress,
+        max_participants: e.maxParticipants,
+        participant_count: e.participantCount,
+        event_fee: e.eventFee ? Number(e.eventFee) : null,
+        group_name: null as string | null,
+        my_status: e.participants[0]?.status ?? null,
+      })),
+    ].sort((a, b) => b.starts_at.getTime() - a.starts_at.getTime())
+
+    return { events }
+  }
+
   async discoverPublic(userId: string, query: { page?: number; take?: number; sport?: string }) {
     const take = Math.min(Math.max(query.take ?? 20, 1), 50)
     const page = Math.max(query.page ?? 1, 1)
