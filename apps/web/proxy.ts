@@ -1,10 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Tudo exige sessão por padrão. Único bypass: login e o RSVP avulso de
-// eventos não-privados (/e/[eventId]), que aceita visitante sem conta.
+// Tudo exige sessão por padrão. Bypass: login, RSVP avulso de eventos
+// não-privados (/e/[eventId]) e preview de convite de grupo (/join/[code]) —
+// ambos precisam ficar acessíveis sem conta pra visitante e pra crawler de
+// link preview (WhatsApp etc.) conseguirem ler as meta tags de Open Graph.
 const PUBLIC_PATHS = ['/login']
-const PUBLIC_PREFIXES = ['/e/']
+const PUBLIC_PREFIXES = ['/e/', '/join/']
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
