@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Settings, Share2, Star, ChevronRight, Copy, Check, Link2 } from 'lucide-react'
+import { Plus, Settings, Share2, Star, ChevronRight, Copy, Check, X, Link2, UserX } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Header } from '@/components/layout/Header'
+import { HeaderIconButton } from '@/components/layout/HeaderIconButton'
 import { SportCover } from '@/components/shared/SportCover'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { Avatar } from '@/components/ui/Avatar'
@@ -13,7 +15,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { Card } from '@/components/ui/Card'
-import { createInviteCode } from '@/lib/actions/groups'
+import { createInviteCode, removeMember, approveJoinRequest, rejectJoinRequest } from '@/lib/actions/groups'
 import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, formatCurrency, cn, copyToClipboard } from '@/lib/utils'
@@ -54,12 +56,14 @@ export interface MemberItem {
   skill_rating: number
   user_id: string
   user: { id: string; name: string; nickname: string | null; avatar_url?: string | null }
+  last_presence_at?: string | null
 }
 
 export interface RankingEntry {
   user_id: string
   user: { id: string; name: string; nickname: string | null; avatar_url?: string | null }
   presences: number
+  last_presence_at: string
 }
 
 interface GroupPageClientProps {
@@ -70,6 +74,7 @@ interface GroupPageClientProps {
   memberCount: number
   events: EventItem[]
   members: MemberItem[]
+  pendingRequests: MemberItem[]
   ranking: RankingEntry[]
 }
 
@@ -85,6 +90,7 @@ export default function GroupPageClient({
   memberCount,
   events,
   members,
+  pendingRequests,
   ranking,
 }: GroupPageClientProps) {
   const [tab, setTab] = useState<Tab>('events')
@@ -107,17 +113,10 @@ export default function GroupPageClient({
       <Header
         showBack
         rightAction={
-          <div className="flex gap-1">
-            <button
-              onClick={() => setShareOpen(true)}
-              className="size-10 flex items-center justify-center rounded-full bg-slate-800 border border-primary-500/40 text-primary-400 hover:border-primary-500/60 transition-colors cursor-pointer"
-            >
-              <Share2 className="size-4" />
-            </button>
+          <div className="flex gap-2">
+            <HeaderIconButton onClick={() => setShareOpen(true)} icon={<Share2 className="size-4" />} aria-label="Compartilhar" />
             {isAdmin && (
-              <Link href={`/groups/${groupId}/settings`} className="size-10 flex items-center justify-center rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:border-slate-600 transition-colors">
-                <Settings className="size-4" />
-              </Link>
+              <HeaderIconButton href={`/groups/${groupId}/settings`} icon={<Settings className="size-4" />} aria-label="Configurações" />
             )}
           </div>
         }
@@ -146,7 +145,6 @@ export default function GroupPageClient({
                   {myRole === 'admin' ? '⭐ Admin' : myRole === 'organizer' ? 'Organizador' : 'Membro'}
                 </Badge>
               )}
-              <Badge variant="neutral" size="sm">{group.plan}</Badge>
             </div>
           </div>
         </Card>
@@ -160,13 +158,18 @@ export default function GroupPageClient({
               key={id}
               onClick={() => setTab(id)}
               className={cn(
-                'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all cursor-pointer',
+                'flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all cursor-pointer relative',
                 tab === id
                   ? 'bg-primary-500/15 border border-primary-500/50 text-primary-400'
                   : 'text-slate-400 hover:text-slate-300',
               )}
             >
               {label}
+              {id === 'members' && isOrganizer && pendingRequests.length > 0 && (
+                <span className="absolute -top-1 -right-1 size-4 rounded-full bg-amber-500 text-slate-900 text-[10px] font-bold flex items-center justify-center">
+                  {pendingRequests.length}
+                </span>
+              )}
             </button>
           ))}
         </Card>
@@ -195,7 +198,14 @@ export default function GroupPageClient({
             />
           )}
           {tab === 'members' && (
-            <MembersTab members={members} group={group} currentUserId={currentUserId} onInvite={() => setShareOpen(true)} />
+            <MembersTab
+              members={members}
+              pendingRequests={pendingRequests}
+              group={group}
+              currentUserId={currentUserId}
+              canManageMembers={isOrganizer}
+              onInvite={() => setShareOpen(true)}
+            />
           )}
           {tab === 'ranking' && (
             <RankingTab ranking={ranking} currentUserId={currentUserId} />
@@ -237,7 +247,7 @@ function EventsTab({
       {upcoming.length > 0 && (
         <section>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider my-3">Próximos</p>
-          <div className="space-y-3">
+          <div className="flex flex-col space-y-3">
             {upcoming.map((event, i) => (
               <EventCard key={event.id} event={event} groupId={groupId} sport={sport} index={i} perEventFee={perEventFee} />
             ))}
@@ -248,7 +258,7 @@ function EventsTab({
       {past.length > 0 && (
         <section>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Anteriores</p>
-          <div className="space-y-2">
+          <div className="flex flex-col space-y-2">
             {past.map((event) => (
               <Link key={event.id} href={`/groups/${groupId}/events/${event.id}`}>
                 <Card interactive className="flex items-center gap-3 py-3 px-4 rounded-xl">
@@ -399,18 +409,114 @@ function EventCard({
 // ─── Members Tab ───────────────────────────────────────────────────────────────
 
 function MembersTab({
-  members, group, currentUserId, onInvite,
+  members, pendingRequests, group, currentUserId, canManageMembers, onInvite,
 }: {
   members: MemberItem[]
+  pendingRequests: MemberItem[]
   group: GroupDetail
   currentUserId: string
+  canManageMembers: boolean
   onInvite: () => void
 }) {
+  const router = useRouter()
+  const [memberToRemove, setMemberToRemove] = useState<MemberItem | null>(null)
+  const [removing, setRemoving] = useState(false)
+  const [respondingId, setRespondingId] = useState<string | null>(null)
+
   const monthly = members.filter((m) => m.member_type === 'monthly')
   const regular = members.filter((m) => m.member_type === 'regular')
 
+  async function handleConfirmRemove() {
+    if (!memberToRemove) return
+    setRemoving(true)
+    const result = await removeMember(group.id, memberToRemove.user_id)
+    setRemoving(false)
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast.success('Membro removido do grupo.')
+      setMemberToRemove(null)
+      router.refresh()
+    }
+  }
+
+  async function handleApproveRequest(request: MemberItem) {
+    setRespondingId(request.id)
+    const result = await approveJoinRequest(group.id, request.user_id)
+    setRespondingId(null)
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast.success(`${request.user.nickname ?? request.user.name} entrou no grupo! ✅`)
+      router.refresh()
+    }
+  }
+
+  async function handleRejectRequest(request: MemberItem) {
+    setRespondingId(request.id)
+    const result = await rejectJoinRequest(group.id, request.user_id)
+    setRespondingId(null)
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast('Solicitação recusada.')
+      router.refresh()
+    }
+  }
+
   return (
     <div className="space-y-5">
+      {canManageMembers && pendingRequests.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Solicitações pendentes</p>
+            <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
+              {pendingRequests.length}
+            </span>
+          </div>
+          <Card className="p-0 overflow-hidden">
+            {pendingRequests.map((request, i) => {
+              const nickname = request.user.nickname ?? request.user.name.split(' ')[0]
+              return (
+                <div
+                  key={request.id}
+                  className={cn('flex items-center gap-3 py-3 px-4', i > 0 && 'border-t border-slate-800')}
+                >
+                  <Avatar name={request.user.name} src={request.user.avatar_url ?? undefined} size="sm" />
+                  <p className="text-sm font-medium text-slate-200 flex-1 truncate">{nickname}</p>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => handleRejectRequest(request)}
+                      disabled={respondingId === request.id}
+                      className="size-8 flex items-center justify-center rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                      aria-label={`Recusar ${nickname}`}
+                    >
+                      {respondingId === request.id ? (
+                        <span className="size-3.5 rounded-full border-2 border-red-400/30 border-t-red-400 animate-spin" />
+                      ) : (
+                        <X className="size-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleApproveRequest(request)}
+                      disabled={respondingId === request.id}
+                      className="size-8 flex items-center justify-center rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 transition-colors cursor-pointer disabled:opacity-50"
+                      aria-label={`Aprovar ${nickname}`}
+                    >
+                      {respondingId === request.id ? (
+                        <span className="size-3.5 rounded-full border-2 border-primary-400/30 border-t-primary-400 animate-spin" />
+                      ) : (
+                        <Check className="size-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </Card>
+        </section>
+      )}
+
       {group.monthly_fee && (
         <Card className="flex items-center justify-between">
           <div>
@@ -439,7 +545,15 @@ function MembersTab({
           </div>
           <Card className="p-0 overflow-hidden">
             {monthly.map((m, i) => (
-              <MemberRow key={m.id} member={m} index={i} showBorder={i > 0} currentUserId={currentUserId} />
+              <MemberRow
+                key={m.id}
+                member={m}
+                index={i}
+                showBorder={i > 0}
+                currentUserId={currentUserId}
+                canManage={canManageMembers && m.user_id !== currentUserId && m.user_id !== group.admin_id}
+                onRequestRemove={() => setMemberToRemove(m)}
+              />
             ))}
           </Card>
         </section>
@@ -450,7 +564,15 @@ function MembersTab({
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Avulsos ({regular.length})</p>
           <Card className="p-0 overflow-hidden">
             {regular.map((m, i) => (
-              <MemberRow key={m.id} member={m} index={i} showBorder={i > 0} currentUserId={currentUserId} />
+              <MemberRow
+                key={m.id}
+                member={m}
+                index={i}
+                showBorder={i > 0}
+                currentUserId={currentUserId}
+                canManage={canManageMembers && m.user_id !== currentUserId && m.user_id !== group.admin_id}
+                onRequestRemove={() => setMemberToRemove(m)}
+              />
             ))}
           </Card>
         </section>
@@ -466,20 +588,48 @@ function MembersTab({
       <Button variant="outline" fullWidth leftIcon={<Plus className="size-4" />} onClick={onInvite}>
         Convidar membro
       </Button>
+
+      <BottomSheet
+        isOpen={!!memberToRemove}
+        onClose={() => setMemberToRemove(null)}
+        title="Remover membro"
+      >
+        {memberToRemove && (
+          <div className="space-y-4 pb-2">
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Remover <span className="text-slate-200 font-medium">{memberToRemove.user.nickname ?? memberToRemove.user.name}</span> do
+              grupo? Essa pessoa deixará de ver eventos e precisará de um novo convite pra entrar de novo.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" onClick={() => setMemberToRemove(null)} disabled={removing}>
+                Cancelar
+              </Button>
+              <Button variant="danger" onClick={handleConfirmRemove} loading={removing}>
+                Remover
+              </Button>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   )
 }
 
 function MemberRow({
-  member, index, showBorder, currentUserId,
+  member, index, showBorder, currentUserId, canManage, onRequestRemove,
 }: {
   member: MemberItem
   index: number
   showBorder: boolean
   currentUserId: string
+  canManage: boolean
+  onRequestRemove: () => void
 }) {
   const isMe = member.user_id === currentUserId
   const nickname = member.user.nickname ?? member.user.name.split(' ')[0]
+  const lastPresenceLabel = member.last_presence_at
+    ? `Última partida: ${formatDate(member.last_presence_at, { weekday: undefined, day: '2-digit', month: '2-digit' })}`
+    : 'Nunca participou'
 
   return (
     <motion.div
@@ -514,7 +664,20 @@ function MemberRow({
             {'★'.repeat(member.skill_rating)}{'☆'.repeat(Math.max(0, 5 - member.skill_rating))}
           </p>
         )}
+        {canManage && (
+          <p className="text-[10px] text-slate-500 mt-0.5">{lastPresenceLabel}</p>
+        )}
       </div>
+
+      {canManage && (
+        <button
+          onClick={onRequestRemove}
+          className="size-8 flex-shrink-0 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+          aria-label={`Remover ${nickname} do grupo`}
+        >
+          <UserX className="size-4" />
+        </button>
+      )}
     </motion.div>
   )
 }

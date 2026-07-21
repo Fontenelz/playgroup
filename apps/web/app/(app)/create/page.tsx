@@ -27,7 +27,7 @@ export default function CreatePage() {
   return (
     <div>
       <Header title="Criar" showBack />
-      <div className="px-4 py-6 space-y-3">
+      <div className="flex flex-col px-4 py-6 space-y-3">
         <p className="text-sm text-slate-400">O que você quer fazer?</p>
 
         <Link href="/create/group">
@@ -73,7 +73,7 @@ export default function CreatePage() {
                     onChange={(e) => setInviteCode(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
                     placeholder="playgroup.app/join/ft-quinta ou ft-quinta"
-                    className="w-full h-11 bg-slate-800 border border-slate-700 rounded-xl px-4 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                    className="w-full h-11 bg-slate-800 border border-slate-700 rounded-xl mt-2 px-4 text-sm text-slate-100 placeholder:text-slate-500 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
                   />
                   <Button
                     fullWidth

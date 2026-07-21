@@ -52,6 +52,88 @@ export async function createInviteCode(groupId: string): Promise<{ code?: string
   }
 }
 
+export async function removeMember(groupId: string, userId: string): Promise<{ error?: string }> {
+  try {
+    await api.delete(`/groups/${groupId}/members/${userId}`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
+
+export async function updateMemberRole(
+  groupId: string,
+  userId: string,
+  role: 'organizer' | 'participant',
+): Promise<{ error?: string }> {
+  try {
+    await api.patch(`/groups/${groupId}/members/${userId}/role`, { role })
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
+
+export type GroupMembershipStatus = 'none' | 'pending' | 'active'
+
+export interface PublicGroupCard {
+  id: string
+  name: string
+  description: string | null
+  sport: string
+  max_members: number
+  member_count: number
+  my_status: GroupMembershipStatus
+}
+
+export async function getPublicGroupsFeed(sport?: string): Promise<{ groups: PublicGroupCard[]; error?: string }> {
+  try {
+    const result = await api.get<{
+      groups: PublicGroupCard[]
+      total: number
+      page: number
+      take: number
+    }>(`/groups/discover${sport ? `?sport=${encodeURIComponent(sport)}` : ''}`)
+
+    return { groups: result.groups }
+  } catch (err) {
+    if (err instanceof ApiError) return { groups: [], error: err.message }
+    throw err
+  }
+}
+
+export async function requestToJoinGroup(groupId: string): Promise<{ status?: GroupMembershipStatus; error?: string }> {
+  try {
+    const result = await api.post<{ status: GroupMembershipStatus }>(`/groups/${groupId}/join-request`)
+    return { status: result.status }
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
+
+export async function approveJoinRequest(groupId: string, userId: string): Promise<{ error?: string }> {
+  try {
+    await api.post(`/groups/${groupId}/members/${userId}/approve`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
+
+export async function rejectJoinRequest(groupId: string, userId: string): Promise<{ error?: string }> {
+  try {
+    await api.post(`/groups/${groupId}/members/${userId}/reject`)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
+
 export async function joinGroup(code: string): Promise<{ error?: string }> {
   let result: { groupId: string }
   try {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Users, HelpCircle, Search, Plus, Flame, ChevronRight } from 'lucide-react'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
+import { HeaderIconButton } from '@/components/layout/HeaderIconButton'
 import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
 import { getInitials, cn } from '@/lib/utils'
@@ -42,18 +43,9 @@ export function SquadsClient({ groups }: { groups: SquadItem[] }) {
         subtitle="Seus times e sessões"
         right={
           <div className="flex items-center gap-2">
-            <button className="size-10 rounded-full bg-secondary border border-primary/40 text-primary flex items-center justify-center">
-              <HelpCircle className="size-4" />
-            </button>
-            <button className="size-10 rounded-full bg-secondary border border-primary/40 text-primary flex items-center justify-center">
-              <Search className="size-4" />
-            </button>
-            <Link
-              href="/create/group"
-              className="size-10 rounded-full bg-secondary border border-primary/40 text-primary flex items-center justify-center"
-            >
-              <Plus className="size-4" />
-            </Link>
+            <HeaderIconButton icon={<HelpCircle className="size-4" />} aria-label="Ajuda" />
+            <HeaderIconButton href="/descobrir" icon={<Search className="size-4" />} aria-label="Descobrir" />
+            <HeaderIconButton href="/create/group" icon={<Plus className="size-4" />} aria-label="Criar grupo" />
           </div>
         }
       />
@@ -85,7 +77,7 @@ export function SquadsClient({ groups }: { groups: SquadItem[] }) {
                 return (
                   <Link key={group.id} href={`/groups/${group.id}`}>
                     <div className={cn(
-                      'rounded-2xl bg-card border p-4',
+                      'rounded-2xl bg-card border p-4 mb-2',
                       group.role === 'admin' ? 'border-primary/50' : 'border-border',
                     )}>
                       <div className="flex items-center gap-3">

@@ -10,6 +10,7 @@ interface GroupDetailResponse {
   memberCount: number
   events: EventItem[]
   members: MemberItem[]
+  pendingRequests: MemberItem[]
   ranking: RankingEntry[]
 }
 
@@ -36,6 +37,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
       memberCount={data.memberCount}
       events={data.events}
       members={data.members}
+      pendingRequests={data.pendingRequests}
       ranking={data.ranking}
     />
   )

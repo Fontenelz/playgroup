@@ -6,6 +6,7 @@ import { Bell, Home, Zap, Users, CircleDot, Calendar, ChevronRight, Clock, Check
 import toast from 'react-hot-toast'
 import { Avatar } from '@/components/ui/Avatar'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
+import { HeaderIconButton } from '@/components/layout/HeaderIconButton'
 import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, cn } from '@/lib/utils'
@@ -109,7 +110,7 @@ function MatchCard({
   const canRespond = status === null || status === 'pending'
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-4 space-y-3">
+    <div className="rounded-2xl bg-card border border-border p-4 space-y-3 mb-2">
       <div className="flex items-start justify-between">
         <div>
           <div className="font-bold text-lg text-card-foreground">{title}</div>
@@ -227,17 +228,13 @@ export default function HomeClient({ user, events, unreadCount }: HomeClientProp
         subtitle="Pronto pro próximo jogo?"
         right={
           <div className="flex items-center gap-2">
-            <Link href="/eventos/descobrir" className="size-10 flex items-center justify-center rounded-full bg-secondary border border-primary/40 text-primary">
-              <Search className="size-4" />
-            </Link>
-            <Link href="/notifications" className="relative size-10 flex items-center justify-center rounded-full bg-secondary border border-primary/40 text-primary">
-              <Bell className="size-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 size-4 bg-primary rounded-full text-[10px] font-bold text-primary-foreground flex items-center justify-center">
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
+            <HeaderIconButton href="/descobrir" icon={<Search className="size-4" />} aria-label="Descobrir" />
+            <HeaderIconButton
+              href="/notifications"
+              icon={<Bell className="size-4" />}
+              badge={unreadCount}
+              aria-label="Notificações"
+            />
             <Link href="/profile">
               <Avatar name={user.name} src={user.avatar_url ?? undefined} size="sm" />
             </Link>
@@ -286,7 +283,7 @@ export default function HomeClient({ user, events, unreadCount }: HomeClientProp
               <ChevronRight className="size-5 text-muted-foreground" />
             </Link>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {events.map((event) => {
                 const status = eventStatuses[event.id] ?? null
                 const sport = SPORT_MAP[event.sport as SportId]

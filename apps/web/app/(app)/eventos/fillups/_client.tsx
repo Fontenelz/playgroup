@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Users, HelpCircle, Plus, ChevronDown, SlidersHorizontal, Calendar as CalendarIcon, Clock } from 'lucide-react'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
+import { HeaderIconButton } from '@/components/layout/HeaderIconButton'
 import { EventViewSwitcher } from '@/components/shared/EventViewSwitcher'
 import { BottomSheet } from '@/components/ui/BottomSheet'
 import { SPORT_MAP } from '@/lib/constants'
@@ -99,9 +100,7 @@ export function FillUpsClient({ events, error }: { events: PublicEventCard[]; er
         subtitle="Reservou quadra mas faltam jogadores?"
         right={
           <div className="flex items-center gap-2">
-            <button className="size-10 rounded-full bg-secondary border border-primary/40 text-primary flex items-center justify-center">
-              <HelpCircle className="size-5" />
-            </button>
+            <HeaderIconButton icon={<HelpCircle className="size-4" />} aria-label="Ajuda" />
             <Link
               href="/create/evento"
               className="h-10 px-4 rounded-full bg-primary text-primary-foreground font-semibold flex items-center gap-1.5"

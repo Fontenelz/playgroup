@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Zap, SlidersHorizontal, HelpCircle, Search } from 'lucide-react'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
+import { HeaderIconButton } from '@/components/layout/HeaderIconButton'
 import { EventViewSwitcher } from '@/components/shared/EventViewSwitcher'
 import { Avatar } from '@/components/ui/Avatar'
 import { SPORT_MAP } from '@/lib/constants'
@@ -63,12 +64,8 @@ export function SoloKickoffsClient({ events, error }: { events: PublicEventCard[
         subtitle="Encontre um jogo e entre em segundos"
         right={
           <div className="flex items-center gap-2">
-            <button className="size-10 rounded-full bg-secondary border border-primary/40 text-primary flex items-center justify-center">
-              <SlidersHorizontal className="size-4" />
-            </button>
-            <button className="size-10 rounded-full bg-secondary border border-primary/40 text-primary flex items-center justify-center">
-              <HelpCircle className="size-5" />
-            </button>
+            <HeaderIconButton icon={<SlidersHorizontal className="size-4" />} aria-label="Filtros" />
+            <HeaderIconButton icon={<HelpCircle className="size-4" />} aria-label="Ajuda" />
           </div>
         }
       />

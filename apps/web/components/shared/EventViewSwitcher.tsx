@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 const VIEWS = [
-  { href: '/eventos/descobrir', label: 'Descobrir' },
+  { href: '/descobrir', label: 'Descobrir' },
   { href: '/eventos/fillups', label: 'Fill Ups' },
   { href: '/eventos/solo-kickoffs', label: 'Solo Kickoffs' },
 ] as const

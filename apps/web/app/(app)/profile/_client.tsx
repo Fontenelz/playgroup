@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { LogOut, Settings, Leaf, Calendar as CalIcon, User } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { ScreenHeader } from '@/components/layout/ScreenHeader'
+import { HeaderIconButton } from '@/components/layout/HeaderIconButton'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { SportIcon } from '@/components/shared/SportIcon'
@@ -60,9 +61,7 @@ export default function ProfileClient({
         title="Meu Perfil"
         subtitle="Acompanhe sua jornada e conquistas"
         right={
-          <Link href="/profile/edit" className="size-10 rounded-full bg-secondary border border-border text-muted-foreground flex items-center justify-center">
-            <Settings className="size-4" />
-          </Link>
+          <HeaderIconButton href="/profile/edit" icon={<Settings className="size-4" />} aria-label="Editar perfil" />
         }
       />
 
@@ -130,7 +129,7 @@ export default function ProfileClient({
             <div className="text-[11px] uppercase text-muted-foreground tracking-wider">Meus grupos</div>
             {groups.map((group) => (
               <Link key={group.id} href={`/groups/${group.id}`}>
-                <div className="flex items-center gap-3 rounded-2xl bg-card border border-border p-3">
+                <div className="flex items-center gap-3 rounded-2xl bg-card border border-border p-3 mb-2">
                   <SportIcon sport={group.sport as SportId} size="sm" />
                   <p className="flex-1 text-sm text-foreground">{group.name}</p>
                 </div>

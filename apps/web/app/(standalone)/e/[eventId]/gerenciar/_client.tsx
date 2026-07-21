@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { MapPin, Clock, Users, Shuffle, Share2, Link2, Copy, Check, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Header } from '@/components/layout/Header'
+import { HeaderIconButton } from '@/components/layout/HeaderIconButton'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
@@ -96,12 +97,7 @@ export default function ManageEventClient({
         showBack
         backHref={`/e/${eventId}`}
         rightAction={
-          <button
-            onClick={() => setShowShare(true)}
-            className="size-10 flex items-center justify-center rounded-full bg-slate-800 border border-primary-500/40 text-primary-400 hover:border-primary-500/60 transition-colors cursor-pointer"
-          >
-            <Share2 className="size-4" />
-          </button>
+          <HeaderIconButton onClick={() => setShowShare(true)} icon={<Share2 className="size-4" />} aria-label="Compartilhar" />
         }
       />
 
