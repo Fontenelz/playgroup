@@ -6,7 +6,9 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { ArrowRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export default function CreatePage() {
   const router = useRouter()
@@ -63,7 +65,7 @@ export default function CreatePage() {
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="bg-slate-900 border border-t-0 border-slate-800 rounded-b-2xl px-4 pb-4 space-y-3">
+                <Card className="rounded-t-none px-4 pt-0 pb-4 space-y-3">
                   <input
                     autoFocus
                     type="text"
@@ -93,7 +95,7 @@ export default function CreatePage() {
                       </button>
                     ))}
                   </div>
-                </div>
+                </Card>
               </motion.div>
             )}
           </AnimatePresence>
@@ -112,14 +114,17 @@ function OptionCard({
   active?: boolean
 }) {
   return (
-    <div className={`flex items-center gap-4 bg-slate-900 border rounded-2xl p-4 transition-all active:scale-[0.99] ${active ? 'border-primary-500/60 bg-primary-500/5 rounded-b-none' : 'border-slate-800 hover:border-primary-500/40 hover:bg-primary-500/5'}`}>
-      <div className="size-12 rounded-xl bg-slate-800 flex items-center justify-center text-2xl flex-shrink-0">
+    <Card interactive className={cn(
+      'flex items-center gap-4',
+      active ? 'bg-primary-500/5 rounded-b-none' : 'hover:bg-primary-500/5',
+    )}>
+      <div className="size-12 rounded-xl bg-primary-500/15 border border-primary-500/40 flex items-center justify-center text-2xl flex-shrink-0">
         {emoji}
       </div>
       <div>
         <p className="text-sm font-semibold text-slate-100">{label}</p>
         <p className="text-xs text-slate-500">{desc}</p>
       </div>
-    </div>
+    </Card>
   )
 }

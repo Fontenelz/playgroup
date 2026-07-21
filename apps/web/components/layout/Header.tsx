@@ -29,11 +29,11 @@ export function Header({ title, showBack, backHref, rightAction, className, tran
     >
       {showBack && (
         backHref ? (
-          <Link href={backHref} className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 transition-colors -ml-1">
+          <Link href={backHref} className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors">
             <ChevronLeft className="size-5 text-slate-400" />
           </Link>
         ) : (
-          <button onClick={() => router.back()} className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 transition-colors -ml-1 cursor-pointer">
+          <button onClick={() => router.back()} className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer">
             <ChevronLeft className="size-5 text-slate-400" />
           </button>
         )

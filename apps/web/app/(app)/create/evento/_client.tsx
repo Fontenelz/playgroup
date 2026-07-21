@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { NumberStepper } from '@/components/ui/NumberStepper'
 import { StepBar } from '@/components/ui/StepBar'
+import { Card } from '@/components/ui/Card'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { SPORTS } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
@@ -126,7 +127,7 @@ export function CreateStandaloneEventClient() {
         <div className="flex items-center justify-between">
           <button
             onClick={step === 1 ? () => router.back() : goBack}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+            className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -345,7 +346,7 @@ function StepDetails({
           </div>
           {form.visibility === 'link_only' && (
             <div className="size-5 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Check className="size-3 text-white" strokeWidth={3} />
+              <Check className="size-3 text-slate-900" strokeWidth={3} />
             </div>
           )}
         </button>
@@ -371,7 +372,7 @@ function StepDetails({
           </div>
           {form.visibility === 'public' && (
             <div className="size-5 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Check className="size-3 text-white" strokeWidth={3} />
+              <Check className="size-3 text-slate-900" strokeWidth={3} />
             </div>
           )}
         </button>
@@ -391,7 +392,7 @@ function StepDetails({
 
       <div className="space-y-2">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Resumo do evento</p>
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-800">
+        <Card className="p-0 overflow-hidden divide-y divide-slate-800">
           <ReviewRow icon="🏆" label="Esporte" value={sportLabel} />
           <ReviewRow icon="📆" label="Data" value={formatDatePretty(form.date)} />
           <ReviewRow icon="🕐" label="Horário" value={`${form.startTime} – ${form.endTime}`} />
@@ -401,7 +402,7 @@ function StepDetails({
           {form.notes && (
             <ReviewRow icon="📝" label="Obs." value={form.notes} />
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )

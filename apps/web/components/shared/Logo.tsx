@@ -15,10 +15,10 @@ export function Logo({ size = 'md', showText = true, className }: LogoProps) {
   return (
     <div className={cn('flex items-center gap-2.5', className)}>
       <svg viewBox="0 0 64 64" width={mark} height={mark} role="img" aria-label="PlayGroup" className="flex-shrink-0">
-        <rect width="64" height="64" rx="16" fill="#0f172a" />
-        <circle cx="22" cy="42" r="9" fill="#22c55e" />
-        <circle cx="42" cy="42" r="9" fill="#22c55e" fillOpacity="0.55" />
-        <circle cx="32" cy="26" r="8" fill="#22c55e" fillOpacity="0.82" />
+        <rect width="64" height="64" rx="16" fill="#14191C" />
+        <circle cx="22" cy="42" r="9" fill="var(--color-primary-500)" />
+        <circle cx="42" cy="42" r="9" fill="var(--color-primary-500)" fillOpacity="0.55" />
+        <circle cx="32" cy="26" r="8" fill="var(--color-primary-500)" fillOpacity="0.82" />
         <circle cx="46" cy="18" r="5.5" fill="#f97316" />
       </svg>
       {showText && (

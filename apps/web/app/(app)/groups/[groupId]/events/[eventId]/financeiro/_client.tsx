@@ -9,6 +9,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { Card } from '@/components/ui/Card'
 import { markPaymentPaid } from '@/lib/actions/payments'
 import { formatCurrency, cn } from '@/lib/utils'
 
@@ -112,7 +113,7 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+            className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -133,7 +134,7 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
       <div className="flex-1 px-4 py-5 space-y-5 pb-24">
 
         {/* ── Summary card ─────────────────────────────────────────── */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        <Card className="p-0 overflow-hidden">
           <div className="h-2 bg-slate-800">
             <motion.div
               className="h-full bg-primary-500 rounded-r-full"
@@ -169,10 +170,10 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* ── Filter tabs ──────────────────────────────────────────── */}
-        <div className="flex gap-1.5 bg-slate-900 p-1 rounded-xl">
+        <Card className="flex gap-1.5 p-1 rounded-xl">
           {FILTER_TABS.map(({ id, label, count }) => (
             <button
               key={id}
@@ -195,7 +196,7 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
               )}
             </button>
           ))}
-        </div>
+        </Card>
 
         {/* ── Participant list ─────────────────────────────────────── */}
         <div className="space-y-2">
@@ -211,8 +212,8 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3.5"
                 >
+                <Card className="flex items-center gap-3 p-3.5 rounded-xl">
                   <Avatar name={p.name} src={p.avatar_url ?? undefined} size="sm" />
 
                   <div className="flex-1 min-w-0">
@@ -268,6 +269,7 @@ export default function FinanceiroClient({ eventTitle, fee, participants }: Fina
                       <Check className="size-3.5 text-emerald-400" strokeWidth={3} />
                     </div>
                   )}
+                </Card>
                 </motion.div>
               )
             })}

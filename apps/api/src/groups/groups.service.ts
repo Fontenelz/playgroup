@@ -46,11 +46,22 @@ export class GroupsService {
       },
     })
 
+    const groupIds = memberships.map((m) => m.group.id)
+    const memberCounts = groupIds.length
+      ? await this.prisma.groupMember.groupBy({
+          by: ['groupId'],
+          where: { groupId: { in: groupIds }, status: 'active' },
+          _count: { _all: true },
+        })
+      : []
+    const memberCountMap = new Map(memberCounts.map((m) => [m.groupId, m._count._all]))
+
     return memberships.map((m) => ({
       id: m.group.id,
       name: m.group.name,
       sport: m.group.sport,
       max_members: m.group.maxMembers,
+      member_count: memberCountMap.get(m.group.id) ?? 0,
       role: m.role,
     }))
   }
@@ -124,7 +135,15 @@ export class GroupsService {
           maxParticipants: true,
           participantCount: true,
           notes: true,
-          participants: { where: { userId }, select: { status: true }, take: 1 },
+          participants: {
+            take: 20,
+            orderBy: { confirmedAt: 'asc' },
+            select: {
+              userId: true,
+              status: true,
+              user: { select: { name: true, avatarUrl: true } },
+            },
+          },
         },
       }),
       this.prisma.groupMember.findMany({
@@ -151,7 +170,11 @@ export class GroupsService {
       max_participants: e.maxParticipants,
       participant_count: e.participantCount,
       notes: e.notes,
-      my_status: e.participants[0]?.status ?? null,
+      my_status: e.participants.find((p) => p.userId === userId)?.status ?? null,
+      confirmed_avatars: e.participants
+        .filter((p) => p.status === 'confirmed')
+        .slice(0, 4)
+        .map((p) => ({ name: p.user.name, avatar_url: p.user.avatarUrl ?? undefined })),
     }))
 
     const pastEventIds = eventsRaw.filter((e) => e.startsAt < new Date()).map((e) => e.id)

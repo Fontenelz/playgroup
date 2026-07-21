@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { NumberStepper } from '@/components/ui/NumberStepper'
 import { SelectCardGroup } from '@/components/ui/SelectCard'
 import { StepBar } from '@/components/ui/StepBar'
+import { Card } from '@/components/ui/Card'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { formatCurrency, cn } from '@/lib/utils'
 import { createEvent } from '@/lib/actions/events'
@@ -197,7 +198,7 @@ export function CreateEventClient({ group }: { group: GroupData }) {
         <div className="flex items-center justify-between">
           <button
             onClick={step === 1 ? () => router.back() : goBack}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+            className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -327,7 +328,7 @@ function StepWhen({
                   className={cn(
                     'flex-1 h-10 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95',
                     selected
-                      ? 'bg-primary-500 text-white shadow-md shadow-primary-500/30'
+                      ? 'bg-primary-500 text-slate-900 shadow-md shadow-primary-500/30'
                       : 'bg-slate-800 text-slate-400 hover:bg-slate-700',
                   )}
                 >
@@ -505,7 +506,7 @@ function StepSlots({
             max={form.maxParticipants}
           />
 
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
+          <Card className="p-3 space-y-2">
             <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
               <div
                 className="bg-amber-500 rounded-l-full transition-all duration-300"
@@ -526,7 +527,7 @@ function StepSlots({
                 <span className="size-2 rounded-full bg-primary-500 inline-block" />
               </span>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
 
@@ -631,7 +632,7 @@ function StepDetails({
 
       <div className="space-y-2">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Resumo do evento</p>
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-800">
+        <Card className="p-0 overflow-hidden divide-y divide-slate-800">
           <ReviewRow icon="📅" label="Recorrência" value={recurrenceLabel} />
 
           {(form.recurrence === 'weekly' || form.recurrence === 'biweekly') ? (
@@ -660,7 +661,7 @@ function StepDetails({
           {form.seriesEnd && (
             <ReviewRow icon="🔚" label="Série até" value={formatDatePretty(form.seriesEnd)} />
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )

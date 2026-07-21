@@ -108,7 +108,7 @@ export default function NotificationsClient({ initialNotifications }: Notificati
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+            className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -117,7 +117,7 @@ export default function NotificationsClient({ initialNotifications }: Notificati
             <div className="flex items-center gap-2">
               <p className="text-base font-bold text-slate-100">Notificações</p>
               {unreadCount > 0 && (
-                <span className="text-xs font-bold bg-primary-500 text-white px-2 py-0.5 rounded-full">
+                <span className="text-xs font-bold bg-primary-500 text-slate-900 px-2 py-0.5 rounded-full">
                   {unreadCount}
                 </span>
               )}

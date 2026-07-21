@@ -2,20 +2,20 @@
 
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  MapPin, Clock, Users, ChevronDown, ChevronUp,
+  MapPin, Clock, Users, ChevronDown, ChevronUp, ChevronLeft,
   Check, X, AlertTriangle, Share2, Shuffle, DollarSign, Link2, Copy,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar, AvatarGroup } from '@/components/ui/Avatar'
 import { BottomSheet } from '@/components/ui/BottomSheet'
+import { Card } from '@/components/ui/Card'
 import { WaitlistRow } from '@/components/shared/ParticipantRow'
 import { SportCover } from '@/components/shared/SportCover'
-import { SportIcon } from '@/components/shared/SportIcon'
 import {
   confirmParticipation,
   declineParticipation,
@@ -23,6 +23,7 @@ import {
   leaveWaitlist,
   confirmWaitlistSpot,
 } from '@/lib/actions/events'
+import { SPORT_MAP } from '@/lib/constants'
 import type { SportId } from '@/lib/constants'
 import { formatDate, formatTime, formatCurrency, cn, copyToClipboard } from '@/lib/utils'
 import type { ParticipantStatus } from '@/types/app.types'
@@ -120,6 +121,7 @@ export default function EventPageClient({
   const [showDeclined, setShowDeclined]   = useState(false)
   const [showWaitlist, setShowWaitlist]   = useState(true)
   const [showShare, setShowShare]         = useState(false)
+  const [showDetails, setShowDetails]     = useState(false)
   const [loading, setLoading]             = useState<string | null>(null)
 
   // Waitlist countdown — calculado a partir de myWaitlist.expires_at (fonte da
@@ -248,89 +250,125 @@ export default function EventPageClient({
   const timerMin = waitlistSecondsLeft !== null ? Math.floor(waitlistSecondsLeft / 60) : 0
   const timerSec = waitlistSecondsLeft !== null ? waitlistSecondsLeft % 60 : 0
 
+  const sport = SPORT_MAP[event.sport as SportId]
+
   return (
     <div className="min-h-screen">
-      <Header
-        showBack
-        backHref={`/groups/${groupId}`}
-        rightAction={
-          <button
-            onClick={() => setShowShare(true)}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 cursor-pointer"
-          >
-            <Share2 className="size-4" />
-          </button>
-        }
-      />
+      {/* Hero: foto cheia com voltar/compartilhar sobrepostos — port literal de venue.tsx */}
+      <div className="relative h-64">
+        <SportCover sport={event.sport as SportId} size="banner" className="absolute inset-0" priority />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-transparent" />
+        <Link
+          href={`/groups/${groupId}`}
+          className="absolute top-4 left-4 size-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center text-primary"
+        >
+          <ChevronLeft className="size-5" />
+        </Link>
+        <button
+          onClick={() => setShowShare(true)}
+          className="absolute top-4 right-4 size-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center text-foreground cursor-pointer"
+        >
+          <Share2 className="size-5" />
+        </button>
+      </div>
 
-      <div className="px-4 pb-8 space-y-4">
+      <div className="px-5 pt-4 pb-8 space-y-4">
 
-        {/* Event hero card */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden">
-          <div className="relative h-32">
-            <SportCover sport={event.sport as SportId} size="banner" className="absolute inset-0" priority />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
-          </div>
-          <div className="p-5 pt-3">
-            <div className="flex items-start gap-3 mb-4">
-              <SportIcon sport={event.sport as SportId} size="md" className="-mt-9 ring-2 ring-slate-900" />
-              <div className="flex-1 min-w-0">
-                <h1 className="text-lg font-bold text-slate-100 leading-tight">{group.name}</h1>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <Clock className="size-3.5 text-slate-400" />
-                  <p className="text-sm text-slate-400">
-                    {formatDate(event.starts_at, { weekday: 'long', day: '2-digit', month: 'long' })}
-                  </p>
-                </div>
-                <p className="text-sm text-slate-400 ml-5">
-                  {formatTime(event.starts_at)} – {formatTime(event.ends_at)}
-                </p>
-              </div>
+        {/* Título + preço/horário */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-3xl font-bold text-foreground leading-tight">{group.name}</h1>
+            <div className="flex items-start gap-1 mt-1 text-sm text-muted-foreground">
+              <Clock className="size-4 text-primary flex-shrink-0 mt-0.5" />
+              <span className="capitalize">
+                {formatDate(event.starts_at, { weekday: 'long', day: '2-digit', month: 'long' })}
+                {' · '}{formatTime(event.starts_at)}–{formatTime(event.ends_at)}
+              </span>
             </div>
-
             {event.location_name && (
-              <div className="flex items-start gap-2 bg-slate-800 rounded-xl px-3 py-2.5 mb-4">
-                <MapPin className="size-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-slate-200">{event.location_name}</p>
-                  {event.location_address && (
-                    <p className="text-xs text-slate-500">{event.location_address}</p>
-                  )}
-                </div>
+              <div className="flex items-start gap-1 mt-1 text-sm text-muted-foreground">
+                <MapPin className="size-4 text-primary flex-shrink-0 mt-0.5" />
+                <span>{event.location_name}</span>
               </div>
             )}
+          </div>
+          {group.per_event_fee ? (
+            <div className="text-right flex-shrink-0">
+              <div className="text-[10px] uppercase text-muted-foreground">a partir de</div>
+              <div className="text-primary font-bold text-xl">{formatCurrency(group.per_event_fee)}</div>
+              <div className="text-xs text-muted-foreground">/ pessoa</div>
+            </div>
+          ) : null}
+        </div>
 
-            {/* Slots */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-400 flex items-center gap-1.5">
-                  <Users className="size-4" />
-                  {participantCount}/{event.max_participants} confirmados
-                </span>
-                <span className={cn('font-semibold', slots > 0 ? 'text-primary-400' : 'text-amber-400')}>
-                  {slots > 0 ? `${slots} vagas` : 'Lotado'}
-                </span>
-              </div>
-              <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+        {/* Chips de info */}
+        <div className="flex gap-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-card border border-border px-3 py-1.5 text-sm">
+            {sport?.emoji} {sport?.label}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-lg bg-card border border-border px-3 py-1.5 text-sm">
+            <Users className="size-4" /> {event.max_participants} vagas
+          </span>
+        </div>
+
+        {/* Detalhes e endereço (colapsável) — equivalente a "Rules & Address" */}
+        {(event.location_address || event.notes) && (
+          <div>
+            <button
+              onClick={() => setShowDetails((v) => !v)}
+              className="w-full flex items-center justify-between rounded-xl bg-card border border-border px-4 py-3.5 text-sm uppercase tracking-wider font-semibold cursor-pointer"
+            >
+              Detalhes e endereço
+              <ChevronDown className={cn('size-5 transition-transform', showDetails && 'rotate-180')} />
+            </button>
+            <AnimatePresence>
+              {showDetails && (
                 <motion.div
-                  animate={{ width: `${Math.min(fill, 1) * 100}%` }}
-                  transition={{ duration: 0.5 }}
-                  className={cn('h-full rounded-full transition-colors', fill >= 1 ? 'bg-amber-500' : 'bg-primary-500')}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-slate-500">
-                <span>⭐ {event.monthly_slots} vagas mensalistas</span>
-                <span>{event.max_participants - event.monthly_slots} avulsas</span>
-              </div>
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-3 space-y-2 text-sm">
+                    {event.location_address && <p className="text-muted-foreground">{event.location_address}</p>}
+                    {event.notes && <p className="text-warning">📝 {event.notes}</p>}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Vagas — equivalente a "AMENITIES" */}
+        <div>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Vagas</p>
+          <div className="rounded-2xl bg-card border border-border p-4 grid grid-cols-2 gap-y-3">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="size-2 rounded-full bg-primary flex-shrink-0" />
+              <span>{participantCount} confirmados</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className={cn('size-2 rounded-full flex-shrink-0', slots > 0 ? 'bg-primary' : 'bg-muted-foreground/40')} />
+              <span className={cn(slots <= 0 && 'line-through text-muted-foreground')}>
+                {slots > 0 ? `${slots} vagas livres` : 'Lotado'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="size-2 rounded-full bg-warning flex-shrink-0" />
+              <span>{event.monthly_slots} mensalistas</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="size-2 rounded-full bg-primary flex-shrink-0" />
+              <span>{event.max_participants - event.monthly_slots} avulsas</span>
             </div>
           </div>
-
-          {/* Notes banner */}
-          {event.notes && (
-            <div className="px-5 py-3 bg-amber-500/5 border-t border-amber-500/20">
-              <p className="text-xs text-amber-400">📝 {event.notes}</p>
-            </div>
-          )}
+          <div className="h-2 bg-secondary rounded-full overflow-hidden mt-3">
+            <motion.div
+              animate={{ width: `${Math.min(fill, 1) * 100}%` }}
+              transition={{ duration: 0.5 }}
+              className={cn('h-full rounded-full transition-colors', fill >= 1 ? 'bg-warning' : 'bg-primary')}
+            />
+          </div>
         </div>
 
         {/* MY ACTION CARD */}
@@ -339,7 +377,7 @@ export default function EventPageClient({
             <motion.div key="confirmed" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
               <div className="bg-primary-500/10 border border-primary-500/30 rounded-2xl p-4 flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-primary-500 flex items-center justify-center flex-shrink-0">
-                  <Check className="size-5 text-white" strokeWidth={3} />
+                  <Check className="size-5 text-slate-900" strokeWidth={3} />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-primary-300">Você está confirmado!</p>
@@ -471,7 +509,7 @@ export default function EventPageClient({
             </div>
           </button>
 
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <Card className="p-0 overflow-hidden">
             {confirmedList.length === 0 && (
               <p className="text-sm text-slate-500 text-center py-6">Ninguém confirmou ainda.</p>
             )}
@@ -517,7 +555,7 @@ export default function EventPageClient({
                   : `Ver mais ${confirmedList.length - 5} confirmados`}
               </button>
             )}
-          </div>
+          </Card>
         </section>
 
         {/* ── WAITLIST ─────────────────────────────────────────────────── */}
@@ -546,7 +584,7 @@ export default function EventPageClient({
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
                 >
-                  <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+                  <Card className="p-0 overflow-hidden">
                     {waitlist.map((w, i) => (
                       <div key={w.id} className={cn(i > 0 && 'border-t border-slate-800')}>
                         <WaitlistRow
@@ -565,7 +603,7 @@ export default function EventPageClient({
                         🔔 Notificação automática ao abrir vaga · Prazo de 30 min para confirmar
                       </p>
                     </div>
-                  </div>
+                  </Card>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -591,7 +629,7 @@ export default function EventPageClient({
             <AnimatePresence>
               {showDeclined && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                  <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden">
+                  <Card className="p-0 overflow-hidden bg-slate-900/50">
                     {declinedParticipants.map((p, i) => (
                       <div key={p.id} className={i > 0 ? 'border-t border-slate-800' : ''}>
                         <div className="flex items-center gap-3 px-4 py-3 opacity-50">
@@ -603,7 +641,7 @@ export default function EventPageClient({
                         </div>
                       </div>
                     ))}
-                  </div>
+                  </Card>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -612,7 +650,7 @@ export default function EventPageClient({
 
         {/* ── PAYMENT INFO ────────────────────────────────────────────── */}
         {group.per_event_fee && myStatus !== 'confirmed' && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center gap-3">
+          <Card className="flex items-center gap-3">
             <span className="text-2xl">💰</span>
             <div>
               <p className="text-sm font-semibold text-slate-100">
@@ -622,7 +660,7 @@ export default function EventPageClient({
                 Pagamento via PIX após confirmação.
               </p>
             </div>
-          </div>
+          </Card>
         )}
       </div>
 

@@ -107,7 +107,7 @@ function OnboardingForm() {
         {step > 1 ? (
           <button
             onClick={() => setStep(step - 1)}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 transition-colors text-slate-400 cursor-pointer"
+            className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors text-slate-400 cursor-pointer"
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -224,7 +224,7 @@ function OnboardingForm() {
                         </span>
                         {selected && (
                           <div className="ml-auto size-5 rounded-full bg-primary-500 flex items-center justify-center flex-shrink-0">
-                            <Check className="size-3 text-white" strokeWidth={3} />
+                            <Check className="size-3 text-slate-900" strokeWidth={3} />
                           </div>
                         )}
                       </button>

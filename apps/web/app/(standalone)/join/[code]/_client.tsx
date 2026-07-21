@@ -8,6 +8,7 @@ import { ChevronLeft, Users, Lock, Globe, Check, AlertCircle } from 'lucide-reac
 import { Button } from '@/components/ui/Button'
 import { Avatar, AvatarGroup } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
+import { Card } from '@/components/ui/Card'
 import { SportCover } from '@/components/shared/SportCover'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { joinGroup } from '@/lib/actions/groups'
@@ -43,7 +44,7 @@ export function InvalidCodeView() {
       <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/60 px-4 py-4">
         <button
           onClick={() => router.back()}
-          className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+          className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
         >
           <ChevronLeft className="size-5" />
         </button>
@@ -118,7 +119,7 @@ export default function JoinGroupClient({ code, group, memberCount, members, isM
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+            className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -179,41 +180,42 @@ export default function JoinGroupClient({ code, group, memberCount, members, isM
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Users className="size-3.5" />
-                Membros
-              </p>
-              <p className="text-xs text-slate-500">{memberCount} ativos</p>
-            </div>
+            <Card className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Users className="size-3.5" />
+                  Membros
+                </p>
+                <p className="text-xs text-slate-500">{memberCount} ativos</p>
+              </div>
 
-            <div className="flex items-center gap-3">
-              <AvatarGroup
-                users={members.slice(0, 7).map((m) => ({ name: m.user.name, avatar_url: m.user.avatar_url ?? undefined }))}
-                max={7}
-                size="sm"
-              />
-            </div>
+              <div className="flex items-center gap-3">
+                <AvatarGroup
+                  users={members.slice(0, 7).map((m) => ({ name: m.user.name, avatar_url: m.user.avatar_url ?? undefined }))}
+                  max={7}
+                  size="sm"
+                />
+              </div>
 
-            <div className="space-y-2 pt-1">
-              {members.slice(0, 3).map((m) => {
-                const nickname = m.user.nickname ?? m.user.name.split(' ')[0]
-                return (
-                  <div key={m.id} className="flex items-center gap-2">
-                    <Avatar name={m.user.name} src={m.user.avatar_url ?? undefined} size="xs" />
-                    <span className="text-xs text-slate-300 flex-1">{nickname}</span>
-                    {m.role === 'admin' && (
-                      <span className="text-[10px] font-medium text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded-full">admin</span>
-                    )}
-                  </div>
-                )
-              })}
-              {members.length > 3 && (
-                <p className="text-xs text-slate-600">+ {memberCount - 3} outros membros</p>
-              )}
-            </div>
+              <div className="space-y-2 pt-1">
+                {members.slice(0, 3).map((m) => {
+                  const nickname = m.user.nickname ?? m.user.name.split(' ')[0]
+                  return (
+                    <div key={m.id} className="flex items-center gap-2">
+                      <Avatar name={m.user.name} src={m.user.avatar_url ?? undefined} size="xs" />
+                      <span className="text-xs text-slate-300 flex-1">{nickname}</span>
+                      {m.role === 'admin' && (
+                        <span className="text-[10px] font-medium text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded-full">admin</span>
+                      )}
+                    </div>
+                  )
+                })}
+                {members.length > 3 && (
+                  <p className="text-xs text-slate-600">+ {memberCount - 3} outros membros</p>
+                )}
+              </div>
+            </Card>
           </motion.div>
         )}
 
@@ -223,28 +225,29 @@ export default function JoinGroupClient({ code, group, memberCount, members, isM
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.16 }}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2"
           >
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Financeiro</p>
-            {group.monthly_fee && (
-              <div className="flex justify-between">
-                <span className="text-sm text-slate-400">Mensalidade</span>
-                <span className="text-sm font-semibold text-slate-100">
-                  {formatCurrency(group.monthly_fee)}/mês
-                </span>
-              </div>
-            )}
-            {group.per_event_fee && (
-              <div className="flex justify-between">
-                <span className="text-sm text-slate-400">Avulso/evento</span>
-                <span className="text-sm font-semibold text-slate-100">
-                  {formatCurrency(group.per_event_fee)}/evento
-                </span>
-              </div>
-            )}
-            {group.payment_day && (
-              <p className="text-xs text-slate-600 mt-1">Vencimento todo dia {group.payment_day}</p>
-            )}
+            <Card className="space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Financeiro</p>
+              {group.monthly_fee && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-400">Mensalidade</span>
+                  <span className="text-sm font-semibold text-slate-100">
+                    {formatCurrency(group.monthly_fee)}/mês
+                  </span>
+                </div>
+              )}
+              {group.per_event_fee && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-slate-400">Avulso/evento</span>
+                  <span className="text-sm font-semibold text-slate-100">
+                    {formatCurrency(group.per_event_fee)}/evento
+                  </span>
+                </div>
+              )}
+              {group.payment_day && (
+                <p className="text-xs text-slate-600 mt-1">Vencimento todo dia {group.payment_day}</p>
+              )}
+            </Card>
           </motion.div>
         )}
 
@@ -306,9 +309,9 @@ export default function JoinGroupClient({ code, group, memberCount, members, isM
 
 function StatCard({ value, label }: { value: string; label: string }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center">
+    <Card className="text-center">
       <p className="text-xl font-bold text-slate-100">{value}</p>
       <p className="text-xs text-slate-500 mt-0.5">{label}</p>
-    </div>
+    </Card>
   )
 }

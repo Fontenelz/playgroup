@@ -315,3 +315,29 @@ export async function getPublicEventsFeed(sport?: string): Promise<{ events: Pub
     throw err
   }
 }
+
+export interface MyEventCard {
+  id: string
+  group_id: string | null
+  title: string
+  sport: string
+  starts_at: string
+  ends_at: string
+  location_name: string | null
+  location_address: string | null
+  max_participants: number
+  participant_count: number
+  event_fee: number | null
+  group_name: string | null
+  my_status: 'confirmed' | 'pending' | 'declined' | 'waitlist' | 'absent' | 'present' | null
+}
+
+export async function getMyEvents(): Promise<{ events: MyEventCard[]; error?: string }> {
+  try {
+    const result = await api.get<{ events: MyEventCard[] }>('/events/mine')
+    return { events: result.events }
+  } catch (err) {
+    if (err instanceof ApiError) return { events: [], error: err.message }
+    throw err
+  }
+}

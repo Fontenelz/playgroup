@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
+import { Card } from '@/components/ui/Card'
 import { SportCover } from '@/components/shared/SportCover'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { confirmAsGuest } from '@/lib/actions/events'
@@ -26,7 +27,7 @@ export function InvalidEventView({ message }: { message?: string }) {
       <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/60 px-4 py-4">
         <Link
           href="/home"
-          className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+          className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
         >
           <ChevronLeft className="size-5" />
         </Link>
@@ -58,7 +59,7 @@ export function AuthRequiredView({ eventId }: { eventId: string }) {
       <div className="sticky top-0 z-40 bg-slate-950/95 backdrop-blur-md border-b border-slate-800/60 px-4 py-4">
         <Link
           href="/home"
-          className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+          className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
         >
           <ChevronLeft className="size-5" />
         </Link>
@@ -135,7 +136,7 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
         <div className="flex items-center gap-3">
           <Link
             href="/home"
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+            className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
           >
             <ChevronLeft className="size-5" />
           </Link>
@@ -175,8 +176,8 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.08 }}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3"
         >
+        <Card className="space-y-3">
           <div className="flex items-center gap-2.5 text-sm text-slate-300">
             <Clock className="size-4 text-slate-500 flex-shrink-0" />
             <span className="capitalize">
@@ -203,6 +204,7 @@ export default function GuestEventClient({ event }: { event: GuestEventPreview }
           {slotsLeft === 0 && !confirmed && (
             <p className="text-xs text-amber-400">Sem vagas no momento — você entra na fila de espera.</p>
           )}
+        </Card>
         </motion.div>
 
         {confirmed && (

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { NumberStepper } from '@/components/ui/NumberStepper'
 import { SelectCardGroup } from '@/components/ui/SelectCard'
 import { StepBar } from '@/components/ui/StepBar'
+import { Card } from '@/components/ui/Card'
 import { SportIcon } from '@/components/shared/SportIcon'
 import { SPORTS } from '@/lib/constants'
 import { formatCurrency, cn } from '@/lib/utils'
@@ -129,7 +130,7 @@ export default function CreateGroupPage() {
         <div className="flex items-center justify-between">
           <button
             onClick={step === 1 ? () => router.back() : goBack}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+            className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -242,7 +243,7 @@ function StepSport({
               </span>
               {selected && (
                 <div className="size-5 rounded-full bg-primary-500 flex items-center justify-center">
-                  <Check className="size-3 text-white" strokeWidth={3} />
+                  <Check className="size-3 text-slate-900" strokeWidth={3} />
                 </div>
               )}
             </button>
@@ -412,7 +413,7 @@ function StepSlots({
                   className={cn(
                     'size-11 rounded-xl text-sm font-bold transition-all cursor-pointer active:scale-95',
                     form.paymentDay === d
-                      ? 'bg-primary-500 text-white shadow-md shadow-primary-500/30'
+                      ? 'bg-primary-500 text-slate-900 shadow-md shadow-primary-500/30'
                       : 'bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700',
                   )}
                 >
@@ -425,7 +426,7 @@ function StepSlots({
 
           {/* Fee preview */}
           {(monthlyFeeNum > 0 || perEventFeeNum > 0) && (
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2">
+            <Card className="space-y-2">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Resumo financeiro</p>
               {monthlyFeeNum > 0 && (
                 <div className="flex justify-between">
@@ -445,7 +446,7 @@ function StepSlots({
                   <span className="text-sm font-bold text-primary-400">{formatCurrency(monthlyFeeNum * form.maxMembers)}</span>
                 </div>
               )}
-            </div>
+            </Card>
           )}
         </motion.div>
       )}
@@ -474,7 +475,7 @@ function StepReview({
       </div>
 
       {/* Identity card */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center gap-4">
+      <Card className="flex items-center gap-4">
         {form.sport && <SportIcon sport={form.sport} size="lg" />}
         <div>
           <p className="text-lg font-bold text-slate-100">{form.name}</p>
@@ -483,10 +484,10 @@ function StepReview({
             <p className="text-xs text-slate-500 mt-1 leading-snug">{form.description}</p>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Details */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden divide-y divide-slate-800">
+      <Card className="p-0 overflow-hidden divide-y divide-slate-800">
         <ReviewRow icon="🏅" label="Esporte"  value={`${selectedSport?.emoji} ${selectedSport?.label}`} />
         <ReviewRow icon="🔐" label="Acesso"   value={accessLabel} />
         <ReviewRow icon="⚡" label="Nível"    value={skillLabel} />
@@ -500,7 +501,7 @@ function StepReview({
         {!form.useFee && (
           <ReviewRow icon="💸" label="Financeiro" value="Sem cobranças" />
         )}
-      </div>
+      </Card>
 
       <div className="bg-primary-500/10 border border-primary-500/30 rounded-xl p-4">
         <p className="text-sm text-primary-300">

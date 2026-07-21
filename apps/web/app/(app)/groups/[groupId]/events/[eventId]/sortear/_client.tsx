@@ -7,6 +7,7 @@ import { ChevronLeft, Shuffle, RefreshCw, Users, Star, ChevronDown, ChevronUp } 
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { SelectCardGroup } from '@/components/ui/SelectCard'
+import { Card } from '@/components/ui/Card'
 import { balancedDraw, type DrawPlayer, randomDraw, SKILL_SCORE } from '@/lib/draw'
 import { cn } from '@/lib/utils'
 import type { SkillLevel } from '@/types/app.types'
@@ -141,7 +142,7 @@ export default function SortearClient({ eventTitle, confirmedParticipants }: Sor
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="size-9 flex items-center justify-center rounded-xl hover:bg-slate-800 text-slate-400 transition-colors cursor-pointer -ml-1"
+            className="size-10 flex items-center justify-center rounded-xl bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-400 transition-colors cursor-pointer"
           >
             <ChevronLeft className="size-5" />
           </button>
@@ -172,7 +173,7 @@ export default function SortearClient({ eventTitle, confirmedParticipants }: Sor
               className="space-y-5"
             >
               {/* Player count info */}
-              <div className="flex items-center gap-3 bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+              <Card className="flex items-center gap-3 p-3.5">
                 <div className="size-9 rounded-xl bg-primary-500/15 flex items-center justify-center">
                   <Users className="size-4 text-primary-400" />
                 </div>
@@ -182,7 +183,7 @@ export default function SortearClient({ eventTitle, confirmedParticipants }: Sor
                     {Math.floor(players.length / numTeams)} por time · {players.length % numTeams > 0 ? `${players.length % numTeams} time(s) com +1` : 'divisão exata'}
                   </p>
                 </div>
-              </div>
+              </Card>
 
               {/* Number of teams */}
               <div className="space-y-2">
@@ -221,13 +222,13 @@ export default function SortearClient({ eventTitle, confirmedParticipants }: Sor
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {players.map((p) => (
-                    <div key={p.userId} className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl p-2.5">
+                    <Card key={p.userId} className="flex items-center gap-2 p-2.5">
                       <Avatar name={p.name} src={p.avatarUrl ?? undefined} size="xs" />
                       <div className="min-w-0">
                         <p className="text-xs font-medium text-slate-200 truncate">{p.nickname}</p>
                         <p className="text-[10px] text-slate-500">{skillLabel[p.skill]}</p>
                       </div>
-                    </div>
+                    </Card>
                   ))}
                 </div>
               </div>
