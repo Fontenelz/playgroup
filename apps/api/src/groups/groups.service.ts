@@ -1,6 +1,12 @@
+import { randomInt } from 'node:crypto'
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { AuthzService } from '../common/authz.service'
 import { PrismaService } from '../prisma/prisma.service'
+
+// Limites da lista de eventos em GroupsService.getDetail — sem isso, um grupo com
+// anos de histórico traz todo o histórico de eventos a cada abertura da tela.
+const UPCOMING_EVENTS_LIMIT = 20
+const PAST_EVENTS_LIMIT = 15
 
 function slugify(name: string): string {
   return name
@@ -12,9 +18,11 @@ function slugify(name: string): string {
     .slice(0, 40)
 }
 
+/** Código de convite — é, na prática, um token de acesso ao grupo, por isso usa
+ *  crypto.randomInt (CSPRNG) em vez de Math.random(). */
 function randomInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  return Array.from({ length: 8 }, () => chars[randomInt(chars.length)]).join('')
 }
 
 export interface CreateGroupDto {
@@ -189,29 +197,41 @@ export class GroupsService {
     })
     if (!membership) throw new NotFoundException('Grupo não encontrado')
 
-    const [eventsRaw, members, memberCount, pendingRaw] = await Promise.all([
-      this.prisma.event.findMany({
-        where: { groupId },
-        orderBy: { startsAt: 'desc' },
+    const eventSelect = {
+      id: true,
+      title: true,
+      startsAt: true,
+      endsAt: true,
+      locationName: true,
+      maxParticipants: true,
+      participantCount: true,
+      notes: true,
+      participants: {
+        take: 20,
+        orderBy: { confirmedAt: 'asc' as const },
         select: {
-          id: true,
-          title: true,
-          startsAt: true,
-          endsAt: true,
-          locationName: true,
-          maxParticipants: true,
-          participantCount: true,
-          notes: true,
-          participants: {
-            take: 20,
-            orderBy: { confirmedAt: 'asc' },
-            select: {
-              userId: true,
-              status: true,
-              user: { select: { name: true, avatarUrl: true } },
-            },
-          },
+          userId: true,
+          status: true,
+          user: { select: { name: true, avatarUrl: true } },
         },
+      },
+    }
+    const now = new Date()
+
+    const [upcomingRaw, pastRaw, members, memberCount, pendingRaw] = await Promise.all([
+      // Mesma ordem "farthest-future-first" que a query única de antes já produzia
+      // (orderBy desc sobre todos os eventos) — só limitando o volume trazido.
+      this.prisma.event.findMany({
+        where: { groupId, startsAt: { gte: now } },
+        orderBy: { startsAt: 'desc' },
+        take: UPCOMING_EVENTS_LIMIT,
+        select: eventSelect,
+      }),
+      this.prisma.event.findMany({
+        where: { groupId, startsAt: { lt: now } },
+        orderBy: { startsAt: 'desc' },
+        take: PAST_EVENTS_LIMIT,
+        select: eventSelect,
       }),
       this.prisma.groupMember.findMany({
         where: { groupId, status: 'active' },
@@ -223,6 +243,7 @@ export class GroupsService {
           skillRating: true,
           userId: true,
           user: { select: { id: true, name: true, nickname: true, avatarUrl: true } },
+          invitedByUser: { select: { id: true, name: true, nickname: true } },
         },
       }),
       this.prisma.groupMember.count({ where: { groupId, status: 'active' } }),
@@ -240,7 +261,7 @@ export class GroupsService {
       }),
     ])
 
-    const events = eventsRaw.map((e) => ({
+    const events = [...upcomingRaw, ...pastRaw].map((e) => ({
       id: e.id,
       title: e.title,
       starts_at: e.startsAt,
@@ -256,13 +277,15 @@ export class GroupsService {
         .map((p) => ({ name: p.user.name, avatar_url: p.user.avatarUrl ?? undefined })),
     }))
 
-    const pastEventIds = eventsRaw.filter((e) => e.startsAt < new Date()).map((e) => e.id)
+    // Ranking sempre considera o histórico completo do grupo, não só a janela
+    // paginada de `events` acima — senão presenças antigas somem do ranking à
+    // medida que o grupo acumula mais eventos do que o limite de paginação.
     let ranking: { user_id: string; user: unknown; presences: number; last_presence_at: Date }[] =
       []
     const lastPresenceByUser = new Map<string, Date>()
-    if (pastEventIds.length > 0) {
+    {
       const presences = await this.prisma.eventParticipant.findMany({
-        where: { eventId: { in: pastEventIds }, status: 'present' },
+        where: { status: 'present', event: { groupId } },
         select: {
           userId: true,
           user: { select: { id: true, name: true, nickname: true, avatarUrl: true } },
@@ -325,6 +348,13 @@ export class GroupsService {
         user_id: m.userId,
         user: m.user,
         last_presence_at: lastPresenceByUser.get(m.userId) ?? null,
+        invited_by: m.invitedByUser
+          ? {
+              id: m.invitedByUser.id,
+              name: m.invitedByUser.name,
+              nickname: m.invitedByUser.nickname,
+            }
+          : null,
       })),
       pendingRequests: pendingRaw.map((m) => ({
         id: m.id,

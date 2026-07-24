@@ -61,3 +61,8 @@ jobs:
       - run: pnpm build
       - run: pnpm test
       - run: pnpm --filter api test:smoke
+      - run: pnpm --filter api test:concurrency
+      - run: pnpm --filter api test:finance-on-confirm
+      - run: pnpm --filter api test:group-pagination
+      - run: pnpm --filter api test:authz
+      - run: pnpm --filter api test:invite-attribution

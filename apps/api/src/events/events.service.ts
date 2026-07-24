@@ -4,6 +4,12 @@ import { AuthzService } from '../common/authz.service'
 import { SPORT_LABELS } from '../common/sports'
 import { PrismaService } from '../prisma/prisma.service'
 
+/** Janela pra confirmar uma vaga reservada da fila de espera antes de expirar e passar pro próximo. */
+const WAITLIST_RESERVATION_MS = 30 * 60 * 1000
+
+/** Todo horário de evento é tratado como horário de Brasília — o app ainda não opera em outro fuso. */
+const BRAZIL_UTC_OFFSET = '-03:00'
+
 export interface CreateEventDto {
   date: string
   startTime: string
@@ -39,6 +45,31 @@ export class EventsService {
     private readonly authz: AuthzService,
   ) {}
 
+  /** Compartilhado por `create` e `createStandalone` — evita duplicar o parsing de
+   *  horário (com o rollover pra madrugada) nos dois métodos de criação de evento. */
+  private buildEventTimes(
+    date: string,
+    startTime: string,
+    endTime: string,
+  ): { startsAt: Date; endsAt: Date } {
+    const startsAt = new Date(`${date}T${startTime}:00${BRAZIL_UTC_OFFSET}`)
+    const endsAt = new Date(`${date}T${endTime}:00${BRAZIL_UTC_OFFSET}`)
+    if (endsAt <= startsAt) endsAt.setDate(endsAt.getDate() + 1)
+    return { startsAt, endsAt }
+  }
+
+  /** Compartilhado por `create` e `createStandalone` — título padrão "Esporte · dia da semana, dd/mm". */
+  private buildEventTitle(sport: string, startsAt: Date): string {
+    const sportLabel = SPORT_LABELS[sport] ?? sport
+    const dateLabel = startsAt.toLocaleDateString('pt-BR', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit',
+      timeZone: 'America/Sao_Paulo',
+    })
+    return `${sportLabel} · ${dateLabel}`
+  }
+
   async create(groupId: string, userId: string, input: CreateEventDto) {
     await this.authz.assertGroupOrganizer(groupId, userId)
 
@@ -48,18 +79,8 @@ export class EventsService {
     })
     if (!group) throw new NotFoundException('Grupo não encontrado')
 
-    const sportLabel = SPORT_LABELS[group.sport] ?? group.sport
-    const startsAt = new Date(`${input.date}T${input.startTime}:00-03:00`)
-    const endsAt = new Date(`${input.date}T${input.endTime}:00-03:00`)
-    if (endsAt <= startsAt) endsAt.setDate(endsAt.getDate() + 1)
-
-    const dateLabel = startsAt.toLocaleDateString('pt-BR', {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit',
-      timeZone: 'America/Sao_Paulo',
-    })
-    const title = `${sportLabel} · ${dateLabel}`
+    const { startsAt, endsAt } = this.buildEventTimes(input.date, input.startTime, input.endTime)
+    const title = this.buildEventTitle(group.sport, startsAt)
 
     const isRecurring = input.recurrence !== 'none'
     let recurrenceRule: string | null = null
@@ -106,18 +127,8 @@ export class EventsService {
   }
 
   async createStandalone(userId: string, input: CreateStandaloneEventDto) {
-    const sportLabel = SPORT_LABELS[input.sport] ?? input.sport
-    const startsAt = new Date(`${input.date}T${input.startTime}:00-03:00`)
-    const endsAt = new Date(`${input.date}T${input.endTime}:00-03:00`)
-    if (endsAt <= startsAt) endsAt.setDate(endsAt.getDate() + 1)
-
-    const dateLabel = startsAt.toLocaleDateString('pt-BR', {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit',
-      timeZone: 'America/Sao_Paulo',
-    })
-    const title = `${sportLabel} · ${dateLabel}`
+    const { startsAt, endsAt } = this.buildEventTimes(input.date, input.startTime, input.endTime)
+    const title = this.buildEventTitle(input.sport, startsAt)
 
     const event = await this.prisma.event.create({
       data: {
@@ -294,13 +305,7 @@ export class EventsService {
   async confirmParticipation(eventId: string, userId: string) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      select: {
-        id: true,
-        groupId: true,
-        visibility: true,
-        maxParticipants: true,
-        participantCount: true,
-      },
+      select: { id: true, groupId: true, visibility: true },
     })
     if (!event) throw new NotFoundException('Evento não encontrado')
 
@@ -316,10 +321,9 @@ export class EventsService {
       return
     }
 
-    const hasSpace = event.participantCount < event.maxParticipants
-    const status = hasSpace ? 'confirmed' : 'pending'
-
-    await this.upsertParticipant(eventId, userId, status, hasSpace ? new Date() : null)
+    // upsertParticipant reserva a vaga atomicamente e rebaixa pra 'pending' se
+    // não houver espaço — não precisa (nem deve) checar capacidade aqui antes.
+    await this.upsertParticipant(eventId, userId, 'confirmed', new Date())
   }
 
   async declineParticipation(eventId: string, userId: string) {
@@ -376,7 +380,7 @@ export class EventsService {
 
     // Se a vaga já estava reservada (notified) pra essa pessoa, libera pro próximo da fila.
     if (entry.status === 'notified') {
-      await this.releaseReservedSlot(eventId)
+      await this.releaseSlot(eventId)
       await this.promoteNextWaitlistEntry(eventId)
     }
   }
@@ -403,24 +407,31 @@ export class EventsService {
 
     // participant_count já foi incrementado quando a vaga foi reservada
     // (promoteNextWaitlistEntry), então aqui só materializa o EventParticipant.
-    await this.prisma.waitlist.update({ where: { id: entry.id }, data: { status: 'confirmed' } })
-    await this.prisma.eventParticipant.upsert({
-      where: { eventId_userId: { eventId, userId } },
-      create: { eventId, userId, status: 'confirmed', confirmedAt: new Date() },
-      update: { status: 'confirmed', confirmedAt: new Date() },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.waitlist.update({ where: { id: entry.id }, data: { status: 'confirmed' } })
+      await tx.eventParticipant.upsert({
+        where: { eventId_userId: { eventId, userId } },
+        create: { eventId, userId, status: 'confirmed', confirmedAt: new Date() },
+        update: { status: 'confirmed', confirmedAt: new Date() },
+      })
+      await this.ensurePayment(eventId, userId, tx)
     })
   }
 
-  /** Confirma direto se há vaga, senão entra (ou permanece) na fila de espera. Idempotente. */
+  /**
+   * Confirma direto se há vaga, senão entra (ou permanece) na fila de espera. Idempotente.
+   *
+   * A decisão "há vaga?" e a reserva dela precisam acontecer na mesma instrução SQL
+   * (ver `reserveSlot`) — checar `participantCount < maxParticipants` numa query e só
+   * depois escrever, em passos separados, permite que duas chamadas concorrentes no
+   * último lugar disponível leiam "tem vaga" antes de qualquer uma escrever, e as duas
+   * confirmem, estourando `maxParticipants`.
+   */
   private async confirmOrJoinWaitlist(eventId: string, userId: string) {
     await this.sweepExpiredWaitlist(eventId)
     await this.sweepUnpaidConfirmations(eventId)
 
-    const [event, existingParticipant, existingWaitlist] = await Promise.all([
-      this.prisma.event.findUnique({
-        where: { id: eventId },
-        select: { participantCount: true, maxParticipants: true },
-      }),
+    const [existingParticipant, existingWaitlist] = await Promise.all([
       this.prisma.eventParticipant.findUnique({
         where: { eventId_userId: { eventId, userId } },
         select: { status: true },
@@ -430,16 +441,21 @@ export class EventsService {
         select: { status: true },
       }),
     ])
-    if (!event) throw new NotFoundException('Evento não encontrado')
 
     if (existingParticipant?.status === 'confirmed') return
     if (existingWaitlist?.status === 'waiting' || existingWaitlist?.status === 'notified') return
 
-    const hasSpace = event.participantCount < event.maxParticipants
-    if (hasSpace) {
-      await this.upsertParticipant(eventId, userId, 'confirmed', new Date())
-      return
-    }
+    const confirmed = await this.prisma.$transaction(async (tx) => {
+      if (!(await this.reserveSlot(eventId, tx))) return false
+      await tx.eventParticipant.upsert({
+        where: { eventId_userId: { eventId, userId } },
+        create: { eventId, userId, status: 'confirmed', confirmedAt: new Date() },
+        update: { status: 'confirmed', confirmedAt: new Date() },
+      })
+      await this.ensurePayment(eventId, userId, tx)
+      return true
+    })
+    if (confirmed) return
 
     const position = await this.prisma.waitlist.count({
       where: { eventId, status: { in: ['waiting', 'notified'] } },
@@ -460,7 +476,7 @@ export class EventsService {
 
     for (const entry of expired) {
       await this.prisma.waitlist.update({ where: { id: entry.id }, data: { status: 'expired' } })
-      await this.releaseReservedSlot(eventId)
+      await this.releaseSlot(eventId)
       await this.promoteNextWaitlistEntry(eventId)
     }
   }
@@ -535,54 +551,110 @@ export class EventsService {
 
   /** Se há vaga livre, reserva (status notified, 30min) pro primeiro da fila e notifica. */
   private async promoteNextWaitlistEntry(eventId: string) {
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-      select: { participantCount: true, maxParticipants: true, title: true },
-    })
-    if (!event || event.participantCount >= event.maxParticipants) return
-
     const next = await this.prisma.waitlist.findFirst({
       where: { eventId, status: 'waiting' },
       orderBy: { joinedAt: 'asc' },
     })
     if (!next) return
 
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000)
-    await this.prisma.waitlist.update({
-      where: { id: next.id },
-      data: { status: 'notified', expiresAt },
+    const promoted = await this.prisma.$transaction(async (tx) => {
+      if (!(await this.reserveSlot(eventId, tx))) return false
+      const expiresAt = new Date(Date.now() + WAITLIST_RESERVATION_MS)
+      await tx.waitlist.update({ where: { id: next.id }, data: { status: 'notified', expiresAt } })
+      return true
     })
-    await this.prisma.event.update({
+    if (!promoted) return
+
+    const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      data: { participantCount: { increment: 1 } },
+      select: { title: true },
     })
     await this.prisma.notification.create({
       data: {
         userId: next.userId,
         type: 'waitlist_called',
         title: 'Vaga disponível! 🎉',
-        body: `Uma vaga abriu em "${event.title}". Confirme em até 30 minutos.`,
+        body: `Uma vaga abriu em "${event?.title ?? ''}". Confirme em até 30 minutos.`,
         data: { eventId },
       },
     })
   }
 
-  private async releaseReservedSlot(eventId: string) {
-    const event = await this.prisma.event.findUnique({
+  /**
+   * Reserva 1 vaga atomicamente (incremento e checagem de capacidade na mesma
+   * instrução SQL) — ver o comentário em `confirmOrJoinWaitlist` sobre por que
+   * "ler e depois escrever" em passos separados permite estourar `maxParticipants`.
+   */
+  private async reserveSlot(
+    eventId: string,
+    client: PrismaService | Prisma.TransactionClient = this.prisma,
+  ): Promise<boolean> {
+    const affected = await client.$executeRaw`
+      UPDATE events SET participant_count = participant_count + 1
+      WHERE id = ${eventId}::uuid AND participant_count < max_participants
+    `
+    return affected > 0
+  }
+
+  private async releaseSlot(
+    eventId: string,
+    client: PrismaService | Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    await client.$executeRaw`
+      UPDATE events SET participant_count = GREATEST(participant_count - 1, 0) WHERE id = ${eventId}::uuid
+    `
+  }
+
+  /**
+   * Garante a cobrança (Payment) no momento em que a participação num evento de
+   * grupo é confirmada — não mais em `financeData`/`GET /finance`, que agora é
+   * só leitura (uma requisição GET não deveria ter efeito de escrita). Idempotente
+   * via a unique constraint em [eventId, userId]; sem custo (fee <= 0) não cria nada.
+   */
+  private async ensurePayment(
+    eventId: string,
+    userId: string,
+    client: PrismaService | Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    const event = await client.event.findUnique({
       where: { id: eventId },
-      select: { participantCount: true },
+      select: {
+        groupId: true,
+        eventFee: true,
+        startsAt: true,
+        group: { select: { perEventFee: true } },
+      },
     })
-    if (event && event.participantCount > 0) {
-      await this.prisma.event.update({
-        where: { id: eventId },
-        data: { participantCount: { decrement: 1 } },
-      })
-    }
+    if (!event?.groupId) return
+
+    const fee = Number(event.eventFee ?? event.group?.perEventFee ?? 0)
+    if (fee <= 0) return
+
+    await client.payment.upsert({
+      where: { eventId_userId: { eventId, userId } },
+      create: {
+        groupId: event.groupId,
+        userId,
+        eventId,
+        type: 'per_event',
+        amount: fee,
+        dueDate: event.startsAt,
+      },
+      update: {},
+    })
   }
 
   async approveParticipant(eventId: string, participantUserId: string, actingUserId: string) {
     const event = await this.assertManageablePublicStandalone(eventId, actingUserId)
-    await this.upsertParticipant(eventId, participantUserId, 'confirmed', new Date())
+    const { finalStatus } = await this.upsertParticipant(
+      eventId,
+      participantUserId,
+      'confirmed',
+      new Date(),
+    )
+    if (finalStatus !== 'confirmed') {
+      throw new BadRequestException('Evento lotado — não é possível aprovar mais participantes')
+    }
     return { id: event.id }
   }
 
@@ -606,51 +678,48 @@ export class EventsService {
     return event
   }
 
+  /**
+   * Grava o status do participante e mantém `participant_count` em sincronia — espelha
+   * o trigger `trg_update_participant_count` do schema original, mas via `reserveSlot`/
+   * `releaseSlot` (atômicos) em vez de ler-e-depois-escrever, e tudo numa `$transaction`
+   * pra não deixar o contador incrementado sem o `EventParticipant` correspondente (ou
+   * vice-versa) se algo falhar no meio.
+   *
+   * Se `status` pedido for 'confirmed' mas não houver vaga, a transação rebaixa
+   * automaticamente pra 'pending' — `finalStatus` no retorno diz o que de fato aconteceu.
+   */
   private async upsertParticipant(
     eventId: string,
     userId: string,
     status: 'confirmed' | 'pending' | 'declined',
     confirmedAt: Date | null,
-  ): Promise<{ previousStatus: string | null }> {
-    const before = await this.prisma.eventParticipant.findUnique({
-      where: { eventId_userId: { eventId, userId } },
-      select: { status: true },
-    })
-
-    await this.prisma.eventParticipant.upsert({
-      where: { eventId_userId: { eventId, userId } },
-      create: { eventId, userId, status, confirmedAt },
-      update: { status, confirmedAt },
-    })
-
-    await this.syncParticipantCount(eventId, before?.status ?? null, status)
-    return { previousStatus: before?.status ?? null }
-  }
-
-  /** Espelha o trigger trg_update_participant_count do schema original. */
-  private async syncParticipantCount(
-    eventId: string,
-    previousStatus: string | null,
-    newStatus: string,
-  ) {
-    if (previousStatus === newStatus) return
-    if (newStatus === 'confirmed') {
-      await this.prisma.event.update({
-        where: { id: eventId },
-        data: { participantCount: { increment: 1 } },
+  ): Promise<{ previousStatus: string | null; finalStatus: 'confirmed' | 'pending' | 'declined' }> {
+    return this.prisma.$transaction(async (tx) => {
+      const before = await tx.eventParticipant.findUnique({
+        where: { eventId_userId: { eventId, userId } },
+        select: { status: true },
       })
-    } else if (previousStatus === 'confirmed') {
-      const event = await this.prisma.event.findUnique({
-        where: { id: eventId },
-        select: { participantCount: true },
-      })
-      if (event && event.participantCount > 0) {
-        await this.prisma.event.update({
-          where: { id: eventId },
-          data: { participantCount: { decrement: 1 } },
-        })
+      const previousStatus = before?.status ?? null
+
+      let finalStatus = status
+      let finalConfirmedAt = confirmedAt
+      if (status === 'confirmed' && previousStatus !== 'confirmed') {
+        if (!(await this.reserveSlot(eventId, tx))) {
+          finalStatus = 'pending'
+          finalConfirmedAt = null
+        }
+      } else if (status !== 'confirmed' && previousStatus === 'confirmed') {
+        await this.releaseSlot(eventId, tx)
       }
-    }
+
+      await tx.eventParticipant.upsert({
+        where: { eventId_userId: { eventId, userId } },
+        create: { eventId, userId, status: finalStatus, confirmedAt: finalConfirmedAt },
+        update: { status: finalStatus, confirmedAt: finalConfirmedAt },
+      })
+
+      return { previousStatus, finalStatus }
+    })
   }
 
   async financeData(eventId: string, userId: string) {
@@ -661,7 +730,6 @@ export class EventsService {
         title: true,
         eventFee: true,
         groupId: true,
-        startsAt: true,
         group: { select: { perEventFee: true } },
       },
     })
@@ -672,41 +740,24 @@ export class EventsService {
 
     const fee = Number(event.eventFee ?? event.group?.perEventFee ?? 0)
 
-    const participants = await this.prisma.eventParticipant.findMany({
-      where: { eventId, status: { in: ['confirmed', 'present'] } },
-      orderBy: { confirmedAt: 'asc' },
-      select: {
-        id: true,
-        userId: true,
-        isMonthly: true,
-        user: { select: { id: true, name: true, nickname: true, avatarUrl: true } },
-      },
-    })
-
-    // Garante que toda cobrança apareça como um Payment real (idempotente via
-    // a unique constraint em [eventId, userId]) — sem isso o financeiro era
-    // só uma lista lida na hora, sem nada persistido pra marcar como pago.
-    const groupId = event.groupId
-    const payments =
-      fee > 0 && participants.length > 0
-        ? await Promise.all(
-            participants.map((p) =>
-              this.prisma.payment.upsert({
-                where: { eventId_userId: { eventId, userId: p.userId } },
-                create: {
-                  groupId,
-                  userId: p.userId,
-                  eventId,
-                  type: 'per_event',
-                  amount: fee,
-                  dueDate: event.startsAt,
-                },
-                update: {},
-                select: { id: true, userId: true, status: true },
-              }),
-            ),
-          )
-        : []
+    // Leitura pura — a cobrança (Payment) já foi criada no momento em que a
+    // participação foi confirmada (ver `ensurePayment`), não mais aqui.
+    const [participants, payments] = await Promise.all([
+      this.prisma.eventParticipant.findMany({
+        where: { eventId, status: { in: ['confirmed', 'present'] } },
+        orderBy: { confirmedAt: 'asc' },
+        select: {
+          id: true,
+          userId: true,
+          isMonthly: true,
+          user: { select: { id: true, name: true, nickname: true, avatarUrl: true } },
+        },
+      }),
+      this.prisma.payment.findMany({
+        where: { eventId },
+        select: { id: true, userId: true, status: true },
+      }),
+    ])
     const paymentByUser = new Map(payments.map((p) => [p.userId, p]))
 
     return {

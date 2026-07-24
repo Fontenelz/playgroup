@@ -12,7 +12,12 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
     "test": "jest",
-    "test:smoke": "ts-node test/smoke.ts"
+    "test:smoke": "ts-node test/smoke.ts",
+    "test:concurrency": "ts-node test/concurrency.ts",
+    "test:finance-on-confirm": "ts-node test/finance-on-confirm.ts",
+    "test:group-pagination": "ts-node test/group-detail-pagination.ts",
+    "test:authz": "ts-node test/authz-e2e.ts",
+    "test:invite-attribution": "ts-node test/invite-attribution.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -34,6 +39,7 @@
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.1.6",
     "@nestjs/platform-express": "^11.1.6",
+    "@nestjs/throttler": "^6.5.0",
     "@playgroup/logger": "workspace:*",
     "@playgroup/types": "workspace:*",
     "@prisma/client": "^6.17.2",

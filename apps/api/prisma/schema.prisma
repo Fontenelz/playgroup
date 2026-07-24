@@ -115,6 +115,7 @@ model User {
 
   adminOfGroups       Group[]            @relation("GroupAdmin")
   memberships         GroupMember[]
+  invitedMemberships  GroupMember[]      @relation("GroupMemberInvitedBy")
   createdInviteCodes  InviteCode[]
   createdEvents       Event[]            @relation("EventCreator")
   eventParticipations EventParticipant[]
@@ -164,10 +165,12 @@ model GroupMember {
   status      MemberStatus @default(active)
   monthlySlot Boolean      @default(false) @map("monthly_slot")
   skillRating Int          @default(3) @map("skill_rating")
+  invitedBy   String?      @map("invited_by") @db.Uuid
   joinedAt    DateTime     @default(now()) @map("joined_at")
 
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group         Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user          User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitedByUser User? @relation("GroupMemberInvitedBy", fields: [invitedBy], references: [id], onDelete: SetNull)
 
   @@unique([groupId, userId])
   @@index([groupId])

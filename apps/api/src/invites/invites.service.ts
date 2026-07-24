@@ -100,6 +100,9 @@ export class InvitesService {
           role: 'participant',
           memberType: 'regular',
           status: 'active',
+          // Registra quem gerou o código usado — exibido na lista de membros
+          // como "convidado por" (ver GroupsService.getDetail).
+          invitedBy: invite.createdBy,
         },
       })
       await tx.inviteCode.update({ where: { id: invite.id }, data: { uses: { increment: 1 } } })

@@ -4,6 +4,18 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { api, ApiError } from '@/lib/api/client'
 
+/** Dispara um POST sem corpo de resposta relevante — o padrão comum às ações de
+ *  participação/fila abaixo (confirmar, recusar, entrar/sair da fila, aprovar/rejeitar). */
+async function postAction(path: string): Promise<{ error?: string }> {
+  try {
+    await api.post(path)
+    return {}
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.message }
+    throw err
+  }
+}
+
 export interface CreateEventInput {
   date: string
   startTime: string
@@ -82,13 +94,7 @@ export async function createStandaloneEvent(input: CreateStandaloneEventInput) {
 }
 
 export async function confirmParticipation(eventId: string): Promise<{ error?: string }> {
-  try {
-    await api.post(`/events/${eventId}/participation/confirm`)
-    return {}
-  } catch (err) {
-    if (err instanceof ApiError) return { error: err.message }
-    throw err
-  }
+  return postAction(`/events/${eventId}/participation/confirm`)
 }
 
 export interface GuestEventPreview {
@@ -204,63 +210,27 @@ export async function confirmAsGuest(
 }
 
 export async function declineParticipation(eventId: string): Promise<{ error?: string }> {
-  try {
-    await api.post(`/events/${eventId}/participation/decline`)
-    return {}
-  } catch (err) {
-    if (err instanceof ApiError) return { error: err.message }
-    throw err
-  }
+  return postAction(`/events/${eventId}/participation/decline`)
 }
 
 export async function joinWaitlist(eventId: string): Promise<{ error?: string }> {
-  try {
-    await api.post(`/events/${eventId}/waitlist/join`)
-    return {}
-  } catch (err) {
-    if (err instanceof ApiError) return { error: err.message }
-    throw err
-  }
+  return postAction(`/events/${eventId}/waitlist/join`)
 }
 
 export async function leaveWaitlist(eventId: string): Promise<{ error?: string }> {
-  try {
-    await api.post(`/events/${eventId}/waitlist/leave`)
-    return {}
-  } catch (err) {
-    if (err instanceof ApiError) return { error: err.message }
-    throw err
-  }
+  return postAction(`/events/${eventId}/waitlist/leave`)
 }
 
 export async function confirmWaitlistSpot(eventId: string): Promise<{ error?: string }> {
-  try {
-    await api.post(`/events/${eventId}/waitlist/confirm`)
-    return {}
-  } catch (err) {
-    if (err instanceof ApiError) return { error: err.message }
-    throw err
-  }
+  return postAction(`/events/${eventId}/waitlist/confirm`)
 }
 
 export async function approveParticipant(eventId: string, participantUserId: string): Promise<{ error?: string }> {
-  try {
-    await api.post(`/events/${eventId}/participants/${participantUserId}/approve`)
-    return {}
-  } catch (err) {
-    if (err instanceof ApiError) return { error: err.message }
-    throw err
-  }
+  return postAction(`/events/${eventId}/participants/${participantUserId}/approve`)
 }
 
 export async function rejectParticipant(eventId: string, participantUserId: string): Promise<{ error?: string }> {
-  try {
-    await api.post(`/events/${eventId}/participants/${participantUserId}/reject`)
-    return {}
-  } catch (err) {
-    if (err instanceof ApiError) return { error: err.message }
-    throw err
-  }
+  return postAction(`/events/${eventId}/participants/${participantUserId}/reject`)
 }
 
 export interface PublicEventCard {

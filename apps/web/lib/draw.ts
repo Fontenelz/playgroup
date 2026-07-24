@@ -27,7 +27,18 @@ export function balancedDraw(players: DrawPlayer[], numTeams: number): DrawPlaye
   })
 }
 
+/** Fisher–Yates — sort(() => Math.random() - 0.5) é um shuffle enviesado e
+ *  dependente da implementação de sort do engine, não uniforme de verdade. */
+function shuffle<T>(items: T[]): T[] {
+  const result = [...items]
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[result[i], result[j]] = [result[j], result[i]]
+  }
+  return result
+}
+
 export function randomDraw(players: DrawPlayer[], numTeams: number): DrawPlayer[] {
-  const shuffled = [...players].sort(() => Math.random() - 0.5)
+  const shuffled = shuffle(players)
   return shuffled.map((p, i) => ({ ...p, teamIndex: i % numTeams }))
 }

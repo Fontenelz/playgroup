@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { Throttle } from '@nestjs/throttler'
 import { IsOptional, IsString } from 'class-validator'
 import { SupabaseJwtGuard, SupabaseOptionalAuthGuard } from '../auth/supabase-jwt.guard'
 import type { SupabaseUser } from '../auth/supabase-jwt.service'
@@ -11,6 +12,11 @@ class ConfirmGuestDto {
   name?: string
 }
 
+// eventId é UUID (sem risco realista de força bruta), então o limite aqui é mais
+// generoso que em invites/* — só para conter custo/abuso, não um segredo adivinhável.
+// Várias pessoas confirmando presença pelo mesmo link compartilhado (mesma rede/IP)
+// não deveriam ser bloqueadas por engano.
+@Throttle({ default: { limit: 30, ttl: 60_000 } })
 @Controller('guest-events')
 export class GuestEventsController {
   constructor(private readonly guestEvents: GuestEventsService) {}

@@ -58,6 +58,7 @@ export interface MemberItem {
   user_id: string
   user: { id: string; name: string; nickname: string | null; avatar_url?: string | null }
   last_presence_at?: string | null
+  invited_by?: { id: string; name: string; nickname: string | null } | null
 }
 
 export interface RankingEntry {
@@ -667,6 +668,11 @@ function MemberRow({
           {member.role === 'admin' && <span className="text-[10px] text-amber-400">👑</span>}
           {member.role === 'organizer' && <span className="text-[10px] text-blue-400">🎯</span>}
         </div>
+        {member.invited_by && (
+          <p className="text-[10px] text-slate-500">
+            Convidado por {member.invited_by.nickname ?? member.invited_by.name.split(' ')[0]}
+          </p>
+        )}
         {member.skill_rating > 0 && (
           <p className="text-[10px] text-amber-500/70">
             {'★'.repeat(member.skill_rating)}{'☆'.repeat(Math.max(0, 5 - member.skill_rating))}

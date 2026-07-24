@@ -7,11 +7,11 @@ function buildPrismaMock() {
   return {
     event: { findUnique: jest.fn() },
     eventParticipant: { findMany: jest.fn() },
-    payment: { upsert: jest.fn() },
+    payment: { findMany: jest.fn().mockResolvedValue([]) },
   } as unknown as PrismaService & {
     event: { findUnique: jest.Mock }
     eventParticipant: { findMany: jest.Mock }
-    payment: { upsert: jest.Mock }
+    payment: { findMany: jest.Mock }
   }
 }
 
@@ -77,24 +77,16 @@ describe('EventsService.financeData', () => {
       title: 'Pelada',
       eventFee: 25,
       groupId: 'group-1',
-      startsAt: new Date('2026-08-01T20:00:00Z'),
       group: { perEventFee: 15 },
     })
     prisma.eventParticipant.findMany.mockResolvedValue([baseParticipant])
-    prisma.payment.upsert.mockResolvedValue({
-      id: 'payment-1',
-      userId: 'user-1',
-      status: 'pending',
-    })
+    prisma.payment.findMany.mockResolvedValue([
+      { id: 'payment-1', userId: 'user-1', status: 'pending' },
+    ])
 
     const result = await service.financeData('event-1', 'user-1')
 
     expect(result.fee).toBe(25)
-    expect(prisma.payment.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        create: expect.objectContaining({ amount: 25, groupId: 'group-1', userId: 'user-1' }),
-      }),
-    )
     expect(result.participants[0]).toMatchObject({
       payment_id: 'payment-1',
       payment_status: 'pending',
@@ -107,18 +99,34 @@ describe('EventsService.financeData', () => {
       title: 'Pelada',
       eventFee: null,
       groupId: 'group-1',
-      startsAt: new Date(),
       group: { perEventFee: 15 },
     })
     prisma.eventParticipant.findMany.mockResolvedValue([baseParticipant])
-    prisma.payment.upsert.mockResolvedValue({
-      id: 'payment-1',
-      userId: 'user-1',
-      status: 'pending',
-    })
+    prisma.payment.findMany.mockResolvedValue([
+      { id: 'payment-1', userId: 'user-1', status: 'pending' },
+    ])
 
     const result = await service.financeData('event-1', 'user-1')
     expect(result.fee).toBe(15)
+  })
+
+  it('não escreve nenhuma cobrança — GET /finance é só leitura (a cobrança já foi criada na confirmação)', async () => {
+    prisma.event.findUnique.mockResolvedValue({
+      id: 'event-1',
+      title: 'Pelada',
+      eventFee: 25,
+      groupId: 'group-1',
+      group: { perEventFee: null },
+    })
+    prisma.eventParticipant.findMany.mockResolvedValue([baseParticipant])
+    prisma.payment.findMany.mockResolvedValue([])
+
+    const result = await service.financeData('event-1', 'user-1')
+
+    expect(result.fee).toBe(25)
+    expect(result.participants[0]).toMatchObject({ payment_id: null, payment_status: 'pending' })
+    // financeData não deve ter nenhum método de escrita de Payment — só findMany.
+    expect((prisma.payment as unknown as { upsert?: unknown }).upsert).toBeUndefined()
   })
 
   it('não gera cobranças quando a taxa é zero, mesmo com participantes confirmados', async () => {
@@ -127,15 +135,14 @@ describe('EventsService.financeData', () => {
       title: 'Pelada',
       eventFee: null,
       groupId: 'group-1',
-      startsAt: new Date(),
       group: { perEventFee: null },
     })
     prisma.eventParticipant.findMany.mockResolvedValue([baseParticipant])
+    prisma.payment.findMany.mockResolvedValue([])
 
     const result = await service.financeData('event-1', 'user-1')
 
     expect(result.fee).toBe(0)
-    expect(prisma.payment.upsert).not.toHaveBeenCalled()
     expect(result.participants[0]).toMatchObject({ payment_id: null, payment_status: 'pending' })
   })
 
