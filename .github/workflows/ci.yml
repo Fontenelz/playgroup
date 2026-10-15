@@ -58,6 +58,9 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # O build não aplica mais migrations (ver apps/api/scripts/vercel-migrate.mjs);
+      # o banco do CI precisa do schema antes dos testes de integração.
+      - run: pnpm --filter api prisma:migrate:deploy
       - run: pnpm build
       - run: pnpm test
       - run: pnpm --filter api test:smoke
