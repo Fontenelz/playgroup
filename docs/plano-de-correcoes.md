@@ -1,6 +1,6 @@
 # Plano de Correções — PlayGroup
 
-> Checklist dos problemas encontrados na revisão de código de 15/10/2026 (base: commit `8da560b`). Cada item é marcado com `[x]` quando a correção entra no `main`, com o commit ao lado. Complementa o [plano de ação de arquitetura](./plano-de-acao-arquitetura.md); não substitui.
+> Checklist dos problemas encontrados na revisão de código de 15/10/2026 (base: commit `8da560b`). Cada item é marcado com `[x]` quando a correção é commitada, com o commit ao lado (e a branch, enquanto não estiver no `main`). Complementa o [plano de ação de arquitetura](./plano-de-acao-arquitetura.md); não substitui.
 >
 > Severidade: 🔴 crítico · 🟠 alto · 🟡 médio · ⚪ baixo. Itens com **⚖️ decisão** precisam de uma escolha de produto antes de começar.
 
@@ -8,13 +8,13 @@
 
 | Fase | Feitas |
 |---|---|
-| 1 — Segurança e controle de acesso | 0 / 7 |
+| 1 — Segurança e controle de acesso | 2 / 7 |
 | 2 — Integridade das vagas e da fila | 0 / 6 |
 | 3 — Funcionalidades que não funcionam | 0 / 13 |
 | 4 — Funcionalidades ausentes | 0 / 4 |
 | 5 — Qualidade de código e testes | 0 / 8 |
 | 6 — Infra e documentação | 0 / 3 |
-| **Total** | **0 / 41** |
+| **Total** | **2 / 41** |
 
 ## Ordem recomendada
 
@@ -27,10 +27,10 @@
 
 ## Fase 1 — Segurança e controle de acesso
 
-- [ ] **S1 · Bloquear open redirect no parâmetro `next`** 🔴
+- [x] **S1 · Bloquear open redirect no parâmetro `next`** 🔴 — `8f29f07` em `fix/s5-s1-migrations-open-redirect` (15/10/2026)
   - Problema: o callback de auth e as Server Actions de login redirecionam para qualquer URL vinda de `?next=`. Um link do PlayGroup pode levar a pessoa a um site falso logo depois do login.
-  - Fazer: criar `safeNextPath(next)` em `lib/utils.ts` (só aceita caminhos que começam com `/`, recusa `//` e `/\`); aplicar no callback OAuth, em `signInWithEmail`, no `emailRedirectTo` do `signUp` e no onboarding.
-  - Arquivos: `apps/web/app/api/auth/callback/route.ts`, `apps/web/lib/actions/auth.ts`, `apps/web/app/(auth)/onboarding/page.tsx`, `apps/web/lib/utils.ts`
+  - Fazer: criar `safeNextPath(next)` em `lib/utils.ts` (só aceita caminhos que começam com `/`, recusa `//` e `/\`); aplicar no callback OAuth, nos logins, no `emailRedirectTo` do `signUp` e no `saveProfile` do onboarding.
+  - Arquivos: `apps/web/app/api/auth/callback/route.ts`, `apps/web/lib/actions/auth.ts`, `apps/web/lib/actions/profile.ts`, `apps/web/lib/utils.ts`, `apps/web/lib/utils.spec.ts`
   - Pronto quando: teste Vitest de `safeNextPath` cobre `https://`, `//`, `/\` e caminhos válidos; login com `?next=https://exemplo.com` cai em `/`.
 
 - [ ] **S2 · Exigir permissão e evento aberto para confirmar ou recusar** 🔴
@@ -52,7 +52,8 @@
   - Arquivos: `apps/api/src/guest-events/guest-events.service.ts`, `guest-events.module.ts`, `apps/api/src/events/events.service.ts`, `apps/api/test/concurrency.ts`
   - Pronto quando: N convidados simultâneos não passam de `max_participants`; reconfirmar com evento lotado mantém a pessoa confirmada.
 
-- [ ] **S5 · Tirar as migrations dos deploys de preview** 🔴
+- [x] **S5 · Tirar as migrations dos deploys de preview** 🔴 — `dae45c4` em `fix/s5-s1-migrations-open-redirect` (15/10/2026)
+  - ⚠️ Pendente fora do código (manual, no dashboard): conferir que o Build Command do projeto `apps/api` na Vercel está no padrão, sem override, e configurar um branch Neon próprio para os previews.
   - Problema: o script `build` roda `prisma migrate deploy`. Na Vercel, todo preview de PR também roda; se as variáveis de preview apontam para o Neon de produção, uma branch experimental muda o schema de produção.
   - Fazer: `build` vira `prisma generate && nest build`; migration roda só quando `VERCEL_ENV === 'production'` (script `vercel-build`) ou como passo do CI antes do deploy; previews usam branch Neon próprio.
   - Arquivos: `apps/api/package.json`, env vars de Preview no dashboard da Vercel
