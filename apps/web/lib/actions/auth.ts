@@ -4,12 +4,13 @@ import { createClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { api } from '@/lib/api/client'
+import { safeNextPath } from '@/lib/utils'
 
 export async function signInWithGoogle(next?: string) {
   const supabase = await createClient()
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get('origin')
   const callbackUrl = next
-    ? `${origin}/api/auth/callback?next=${encodeURIComponent(next)}`
+    ? `${origin}/api/auth/callback?next=${encodeURIComponent(safeNextPath(next))}`
     : `${origin}/api/auth/callback`
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -32,7 +33,7 @@ export async function signInWithApple(next?: string) {
   const supabase = await createClient()
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? (await headers()).get('origin')
   const callbackUrl = next
-    ? `${origin}/api/auth/callback?next=${encodeURIComponent(next)}`
+    ? `${origin}/api/auth/callback?next=${encodeURIComponent(safeNextPath(next))}`
     : `${origin}/api/auth/callback`
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -66,12 +67,14 @@ export async function signInWithEmail(email: string, password: string, next?: st
     const profile = await api.get<{ city: string | null } | null>('/users/me')
 
     if (!profile?.city) {
-      const onboardingUrl = next ? `/onboarding?next=${encodeURIComponent(next)}` : '/onboarding'
+      const onboardingUrl = next
+        ? `/onboarding?next=${encodeURIComponent(safeNextPath(next))}`
+        : '/onboarding'
       redirect(onboardingUrl)
     }
   }
 
-  redirect(next ?? '/')
+  redirect(safeNextPath(next))
 }
 
 export async function signUpWithEmail(email: string, password: string, next?: string) {
@@ -82,7 +85,7 @@ export async function signUpWithEmail(email: string, password: string, next?: st
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/api/auth/callback?next=${encodeURIComponent(next ?? '/')}`,
+      emailRedirectTo: `${origin}/api/auth/callback?next=${encodeURIComponent(safeNextPath(next))}`,
     },
   })
 
