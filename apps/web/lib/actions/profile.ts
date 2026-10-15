@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { api, ApiError } from '@/lib/api/client'
+import { safeNextPath } from '@/lib/utils'
 
 export interface ProfileInput {
   name: string
@@ -32,7 +33,7 @@ export async function saveProfile(data: ProfileInput, next?: string) {
     throw err
   }
 
-  redirect(next ?? '/')
+  redirect(safeNextPath(next))
 }
 
 export async function getProfile() {

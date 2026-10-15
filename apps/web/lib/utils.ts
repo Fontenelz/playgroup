@@ -5,6 +5,30 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+const SAME_ORIGIN_PROBE = 'http://playgroup.invalid'
+
+/**
+ * Valida o parâmetro `?next=` antes de redirecionar — sem isso, um link do
+ * PlayGroup com `next=https://site-falso.com` leva a pessoa para fora do app
+ * logo depois do login (open redirect). Só aceita caminho interno (`/algo`);
+ * qualquer outra coisa vira `fallback`.
+ *
+ * Recusa também `//host` e `/\host` (navegadores tratam ambos como URL de
+ * outro host) e caracteres de controle, que o navegador descarta antes de
+ * interpretar a URL (`/\t/host` viraria `//host`).
+ */
+export function safeNextPath(next: string | null | undefined, fallback = '/'): string {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) return fallback
+  if (/[\\\u0000-\u001F\u007F]/.test(next)) return fallback
+
+  try {
+    if (new URL(next, SAME_ORIGIN_PROBE).origin !== SAME_ORIGIN_PROBE) return fallback
+  } catch {
+    return fallback
+  }
+  return next
+}
+
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
   return new Intl.DateTimeFormat('pt-BR', {
     weekday: 'long',
